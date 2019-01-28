@@ -4,10 +4,10 @@ import rospy
 
 from rdt_mqtt.msg import PackedMessage
 
-SERVER_ADDR = '192.168.109.147'
+SERVER_ADDR = '0.0.0.0'
 SERVER_PORT = 10010
 
-CLIENT_ADDR = '192.168.109.1'
+CLIENT_ADDR = '10.100.32.20'
 CLIENT_PORT = 10010
 
 conn = None
@@ -37,19 +37,21 @@ while not rospy.is_shutdown():
 
     if received_len:
         msg = PackedMessage()
-        msg.channel_name = 'Channel'
-        msg.field = 'dafield'
+        msg.channel_name = "EXAMPLE/input"
+        msg.field = 'rawData'
         data = 0
         for i in range(received_len):
             data += received_data[i]
-        msg.value = data 
         
-        rospy.loginfo(data)
-        pub.publish(msg) 
+        if data != 160:
+            msg.value = data 
+            rospy.loginfo(data)
+            pub.publish(msg) 
 
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))
-        rospy.loginfo('Sent ACK')
-        rospy.loginfo("-------------")
+        if data != 160:
+            rospy.loginfo('Sent ACK')
+            rospy.loginfo("-------------")
 
     time.sleep(0.01)
 

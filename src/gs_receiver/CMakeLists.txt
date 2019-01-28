@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 project(gs_receiver)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
