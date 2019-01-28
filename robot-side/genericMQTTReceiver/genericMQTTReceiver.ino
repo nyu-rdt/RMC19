@@ -41,12 +41,24 @@ void loop() {
     Adafruit_MQTT_Subscribe* subPtr;
     while ((subPtr = mqtt.readSubscription(MQTT_READ_TIMEOUT))){
         if (subPtr == &rawByteIn){
-          char* result = (char *) rawByteIn.lastread;
+          /*char* result = (char *) rawByteIn.lastread;
           uint8_t val = (uint8_t) result[0];
           int i = 1;
           while (val != 0x00){
             Serial.print(val, DEC);
             val = (uint8_t) result[i++];
+          }*/
+          char* holder = (char *)rawByteIn.lastread;
+          int result = atoi(holder);
+          Serial.print(result, DEC);
+          if (result == 687){
+            rawByteOut.publish("Pressed W or S");
+          }
+          if (result == 283){
+            rawByteOut.publish("Pressed A");
+          }
+          if (result == 1091){
+            rawByteOut.publish("Pressed D");
           }
         }
     }
