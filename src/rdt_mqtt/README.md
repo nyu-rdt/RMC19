@@ -1,4 +1,4 @@
-#rdt_mqtt 
+# rdt_mqtt 
 ROS to MQTT bridge
 
 ## Details
