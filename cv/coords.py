@@ -1,5 +1,6 @@
 import cv2
 import apriltag
+import time
 import turtle
 
 class CameraProperties:
@@ -21,15 +22,18 @@ def recolor_frames(frames):
     for f in frames:
         new_frame = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         output.append(new_frame)
-        cv2.imshow("test", new_frame)
     return output
 
-def get_coordinates(frames, detector, cam_properties):
+def get_coordinates(frames, detector, cam_properties, colored_frames):
     if len(frames) != 2:
         return None
-    x_left = detector.detect(frames[1])[0].center[0]
-    x_right = detector.detect(frames[0])[0].center[0]
+    x_left, y_left = detector.detect(frames[1])[0].center
+    x_right, y_right = detector.detect(frames[0])[0].center
     print "x_left %f x_right %f b %f f %f" % (x_left, x_right, cam_properties.b, cam_properties.f)
+    
+    colored_frames[1] = cv2.circle(colored_frames[1], (int(x_left), int(y_left)), 15, (0, 0, 255), -1)
+    colored_frames[0] = cv2.circle(colored_frames[0], (int(x_right), int(y_right)), 15, (255, 0, 0), -1)
+
     x_left = abs(960 - x_left)
     x_right = abs(960 - x_right)
     
@@ -44,7 +48,12 @@ def close(cams):
     cv2.destroyAllWindows()
 
 def scale(coord):
-    return coord[0] * 150, coords[1] * 60000000
+    #return coord[0] * 150, coords[1] * 60000000
+    x = coord[0]
+    y = coord[1] 
+    x = 400 + (x * 150)
+    y = 400 + (y *60000000)
+    return x, y
 
 def display_coords(coords, t):
     x, y = scale(coords)
@@ -63,20 +72,23 @@ if __name__ == "__main__":
     cam0 = cv2.VideoCapture(0)
     cam1 = cv2.VideoCapture(1)
     cams = [cam0, cam1]
-    
     try: 
         while True: 
             orig_frames = get_frames(cams)
             gray_frames = recolor_frames(orig_frames)
             coords = None
             try:
-                coords = get_coordinates(gray_frames, detector, props)
+                coords = get_coordinates(gray_frames, detector, props, orig_frames)
             except Exception as e:
-                pass 
                 #print e
+                pass
+            cv2.imshow('right', orig_frames[1])
+            cv2.imshow('left', orig_frames[0])
+            if cv2.waitKey(1) & 0xff == ord('q'):
+                close(cams)
             if coords is not None:
                 display_coords(coords, t)
-
-    except KeyboardInterrupt as k:
+            time.sleep(0.01)
+    except KeyboardInterrupt:
         close(cams)
 
