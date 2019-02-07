@@ -21,6 +21,7 @@ def recolor_frames(frames):
     for f in frames:
         new_frame = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         output.append(new_frame)
+        cv2.imshow("test", new_frame)
     return output
 
 def get_coordinates(frames, detector, cam_properties):
