@@ -26,15 +26,15 @@ def recolor_frames(frames):
 def get_coordinates(frames, detector, cam_properties):
     if len(frames) != 2:
         return None
-    x_left = detector.detect(frames[0])[0].center[0]
-    x_right = detector.detect(frames[1])[0].center[0]
-
+    x_left = detector.detect(frames[1])[0].center[0]
+    x_right = detector.detect(frames[0])[0].center[0]
+    print "x_left %f x_right %f b %f f %f" % (x_left, x_right, cam_properties.b, cam_properties.f)
     x_left = abs(960 - x_left)
     x_right = abs(960 - x_right)
     
     z = (cam_properties.b  * cam_properties.f) / (abs(x_left - x_right)) 
     x = (z / cam_properties.f) * ((x_left + x_right) / 2)
-
+    print "x %f z %f" % (x ,z) 
     return (x, z)
 
 def close(cams):
@@ -43,22 +43,24 @@ def close(cams):
     cv2.destroyAllWindows()
 
 def scale(coord):
-    return coord
+    return coord[0] * 150, coords[1] * 60000000
 
 def display_coords(coords, t):
-    x = scale(coords[0])
-    y = scale(coords[1])
-    print ("x: %d -- z: %d" % (coords[0], coords[1]))
+    x, y = scale(coords)
+    print ("x: %f -- z: %f" % (coords[0], coords[1]))
+    print ("scaled x: %f -- z: %f" % (x, y))
     t.goto(x, y) 
 
 if __name__ == "__main__":
     t = turtle.Turtle()
     t.color("purple")
     t.width(5)
-    props = CameraProperties(0.1, 0.002)
+    props = CameraProperties(0.093, 0.002)
+    print props.b
+    print "b %f f %f" % (props.b, props.f)
     detector = apriltag.Detector() 
     cam0 = cv2.VideoCapture(0)
-    cam1 = cv2.VideoCapture(2)
+    cam1 = cv2.VideoCapture(1)
     cams = [cam0, cam1]
     
     try: 
@@ -69,22 +71,11 @@ if __name__ == "__main__":
             try:
                 coords = get_coordinates(gray_frames, detector, props)
             except Exception as e:
-                print e
+                pass 
+                #print e
             if coords is not None:
-                display_coords(coords)
+                display_coords(coords, t)
 
     except KeyboardInterrupt as k:
         close(cams)
-
-
-
-
-
-
-
-
-
-
-
-
 

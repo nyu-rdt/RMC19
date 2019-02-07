@@ -3,7 +3,7 @@ import apriltag
 
 
 cap = cv2.VideoCapture(0) # One with stand
-cap2 = cv2.VideoCapture(2) # Without stand
+cap2 = cv2.VideoCapture(1) # Without stand
 detector = apriltag.Detector()
 f = 0.002 # Focal length, need to figure out
 b = 0.1 # Distance between the cameras
