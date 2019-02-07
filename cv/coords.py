@@ -48,7 +48,7 @@ def scale(coord):
 def display_coords(coords, t):
     x = scale(coords[0])
     y = scale(coords[1])
-    print ("x: %d -- z: %d" % (coords[0], coords[1])
+    print ("x: %d -- z: %d" % (coords[0], coords[1]))
     t.goto(x, y) 
 
 if __name__ == "__main__":
