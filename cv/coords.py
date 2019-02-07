@@ -63,15 +63,15 @@ if __name__ == "__main__":
     
     try: 
         while True: 
-        orig_frames = get_frames(cams)
-        gray_frames = recolor_frames(orig_frames)
-        coords = None
-        try:
-            coords = get_coordinates(gray_frames, detector, props)
-        except Exception as e:
-            print e
-        if coords is not None:
-            display_coords(coords)
+            orig_frames = get_frames(cams)
+            gray_frames = recolor_frames(orig_frames)
+            coords = None
+            try:
+                coords = get_coordinates(gray_frames, detector, props)
+            except Exception as e:
+                print e
+            if coords is not None:
+                display_coords(coords)
 
     except KeyboardInterrupt as k:
         close(cams)
