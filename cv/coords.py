@@ -84,10 +84,10 @@ if __name__ == "__main__":
             except Exception as e:
                 #print e
                 pass
-            #cv2.imshow('right', orig_frames[0])
-            #cv2.imshow('left', orig_frames[1])
-            #if cv2.waitKey(1) & 0xff == ord('q'):
-            #    close(cams)
+            cv2.imshow('right', orig_frames[0])
+            cv2.imshow('left', orig_frames[1])
+            if cv2.waitKey(1) & 0xff == ord('q'):
+                close(cams)
             if coords is not None:
                 display_coords(coords, t)
             time.sleep(0.01)
