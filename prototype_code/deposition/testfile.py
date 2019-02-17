@@ -17,7 +17,7 @@ class deposition:
 		self.rate_stall = 0.9999999 #if the weight is constant
 
 	def actuator(self, target_pos):
-		diff = self.curr_target - target_pos
+		diff = self.curr_pos - target_pos
 		if diff >=  0:
 			print "Actuator going up"
 		else:
@@ -38,14 +38,14 @@ class deposition:
 			while(self.weight<self.weight_target):
 				self.weight=update() #getting update from the weight
 			self.vibration()
-		elif purpose == "deposit":
+		elif (purpose == "deposit"):
 			self.actuator(self.pos_x)
 			self.push()
 			weight_five_seconds_ago=self.weight
 			while(self.weight>self.acceptable_weight):
 				self.weight=update() #getting update from the weight
 				rate =(self.weight-weight_give_seconds_Ago)/weight_give_seconds_ago
-				elif(rate<=self.rate_stall):
+				if (rate <= self.rate_stall):
 					push("Attack")
 			self.push()
 		self.actuator.pos_y()
@@ -60,8 +60,14 @@ class deposition:
 			print "Rack and pinion pushing"
 			self.rack=True
 		
+def main():
+	print "Hello World! \n"
+	test=deposition()
 	
-		
+	test.actuator(99999)
+
+if __name__=="__main__":
+	main()		
 		 
 		
     		
