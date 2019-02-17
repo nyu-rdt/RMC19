@@ -1,7 +1,9 @@
-#define start_measure 2.75
-#define end_measure 53.5
-#define start_value 7
-#define end_value 986
+//#define start_measure 2.75
+#define start_measure 88.9
+//#define end_measure 53.5
+#define end_measure 1365.25
+#define start_value 17.2
+#define end_value 984.1
 #define sample_size 50
 
 float slope = (end_measure - start_measure) / (end_value - start_value);
@@ -20,8 +22,9 @@ void loop() {
     average += sample;
     delay(5);
   }
-  Serial.print(analogRead(A0));
-  Serial.print("   ");
+ // Serial.println(analogRead(A0));
+ // Serial.print("   ");
   average = average / sample_size;
-  Serial.println((average * slope) + intercept);
+ // Serial.println(average);
+  Serial.println(((average * slope) + intercept));
 }
