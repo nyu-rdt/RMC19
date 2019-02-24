@@ -1,11 +1,17 @@
 # from ComputerVision import ComputerVision
 import time
+import rospy
+from std_msgs.msg import String
 
 class locomotion:
 	def __init__(self):
 		self.Flag_Begin = 1
 		self.Flag_Collection = 0
 		self.Flag_Deposition = 0
+
+		rospy.init_node('listener', anonymous=True)
+		rospy.Subscriber("coords_get", String, callback)
+		rospy.Subscriber("state_get", String, callback)
 
 	def disengage(self):
 		# TODO: Disengage drummer from robot
