@@ -1,0 +1,28 @@
+If rviz has global fixed frame issue
+rosrun tf static_transform_publisher 0 0 0 0 0 0 1 map my_frame 10
+
+Trying to get this to work right now.
+Might need to write a launch file. Its recieving images but no disparity outputted
+ROS_NAMESPACE=stereo rosrun stereo_image_proc stereo_image_proc
+rosrun image_view stereo_view stereo:=/stereo image:=image_rect_color
+ 
+Fix this launch file. Cameras are using the wrong calibration for image rect
+roslaunch stereo_cam_test.launch
+
+https://answers.ros.org/question/232742/stereo-cameras-no-disparity-output/
+http://wiki.ros.org/stereo_image_proc
+https://www.youtube.com/watch?v=BlDHAzh81qc
+https://answers.ros.org/question/216693/launch-stereo_image_proc-and-image-topic-names/
+
+camera calibration steps
+
+run:
+roslaunch stereo_cam_test.launch
+rosrun camera_calibration cameracalibrator.py --approximate 0.1 --size 8x6 --square 0.0254 right:=/stereo/right/image_raw left:=/stereo/left/image_raw right_camera:=/stereo/right left_camera:=/stereo/left
+
+get projection matrix values
+
+plug projection matrix values into coords2.py
+find the factor to divide points (currently ~1.05) by
+
+

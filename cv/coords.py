@@ -2,6 +2,7 @@ import cv2
 import apriltag
 import time
 import turtle
+import numpy as np
 
 class CameraProperties:
     def __init__(self, b, f):
@@ -27,19 +28,29 @@ def recolor_frames(frames):
 def get_coordinates(frames, detector, cam_properties, colored_frames):
     if len(frames) != 2:
         return None
-    x_left, y_left = detector.detect(frames[0])[0].center
-    x_right, y_right = detector.detect(frames[1])[0].center
+    x_left, y_left= detector.detect(frames[0])[0].center
+    x_right, y_right= detector.detect(frames[1])[0].center
     print "x_left %f x_right %f b %f f %f" % (x_left, x_right, cam_properties.b, cam_properties.f)
+    print "y_left %f y_right %f b %f f %f" % (y_left, y_right, cam_properties.b, cam_properties.f)
     
     colored_frames[0] = cv2.circle(colored_frames[0], (int(x_left), int(y_left)), 15, (0, 0, 255), -1)
     colored_frames[1] = cv2.circle(colored_frames[1], (int(x_right), int(y_right)), 15, (255, 0, 0), -1)
-
+    disparity = abs(x_left - x_right)
+    proj_left = [[837.518077, 0.000000, 320.963043, 0.000000], [0.000000, 837.518077, 252.740004, 0.000000], [0.000000, 0.000000, 1.000000, 0.000000]]
+    proj_right = [[837.518077, 0.000000, 320.963043, -92.556514], [0.000000, 837.518077, 252.740004, 0.000000], [0.000000, 0.000000, 1.000000, 0.000000]]
+    #print np.array([[x_left ], [y_left]]), np.array([[x_right], [y_right]])
+    points4D = cv2.triangulatePoints(np.array(proj_left), np.array(proj_right), np.array([[x_left, x_left], [y_left, y_left]]), np.array([[x_right, x_right], [y_right, y_right]]))
+    print points4D
+    #depth = 1
+    focal = 440 #Approximate focal length
+    #focal = depth * disparity / cam_properties.b
+    depth = focal * cam_properties.b / disparity
+    print "depth: %f, disparity: %f, focal: %f" % (depth, disparity, focal) 
     x_left = abs(960 - x_left)
     x_right = abs(960 - x_right)
     
     z = (cam_properties.b  * cam_properties.f) / (abs(x_left - x_right)) 
     x = (z / cam_properties.f) * ((x_left + x_right) / 2)
-    print "x %f z %f" % (x ,z) 
     return (x, z)
 
 def close(cams):
@@ -74,7 +85,7 @@ if __name__ == "__main__":
     cam0 = cv2.VideoCapture(0)
     cam1 = cv2.VideoCapture(1)
     cams = [cam0, cam1]
-    try: 
+    try:
         while True: 
             orig_frames = get_frames(cams)
             gray_frames = recolor_frames(orig_frames)
