@@ -10,6 +10,7 @@
 #include <vector>
 
 const std::string ADDRESS("tcp://localhost:1883");
+// const std::string ADDRESS("tcp://localhost:10100");
 const std::string CLIENT_ID("MQTT_Bridge");
 
 //mqtt::client cli;
@@ -104,12 +105,19 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
     try {
         std::string topic = msg->channel_name;
         std::string contents = msg->field;
-        int value = msg->value;
+        std::string value = msg->value;
+        std::string converted =""; //can be replaced with a array of chars or ints later
+        for(size_t i=0;i<value.length();i+=2){
+            converted+= std::to_string((int)(16 * (value[i] - '0') + value[i + 1] - '0'));
+            converted+= ' ';
+        }
+	ROS_INFO("RECIEVED %s",value.c_str());
+	ROS_INFO("CONVERTED %s",converted.c_str());
 
         std::stringstream finTopic;
         finTopic << topic << "/" << contents;
         ROS_INFO("SENDING %s", finTopic.str().c_str());
-        cli.publish(mqtt::message(finTopic.str(), std::to_string(value), 0, true));
+        cli.publish(mqtt::message(finTopic.str(), value, 0, true));
         ROS_INFO("SENT %s", finTopic.str().c_str());
     }
     catch (const mqtt::exception &ex){
@@ -120,7 +128,7 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
 
 int main(int argc, char* argv[]){
     ros::init(argc, argv, "sender");
-	ROS_INFO("Starting");
+	  ROS_INFO("Starting");
     user_callback cb;
     cli.set_callback(cb);
 
