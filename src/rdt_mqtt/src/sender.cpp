@@ -10,6 +10,7 @@
 #include <vector>
 
 const std::string ADDRESS("tcp://localhost:1883");
+// const std::string ADDRESS("tcp://localhost:10100");
 const std::string CLIENT_ID("MQTT_Bridge");
 
 //mqtt::client cli;
@@ -104,7 +105,26 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
         std::string topic = msg->channel_name;
         std::string contents = msg->field;
         int value = msg->value;
-
+        //will be using field temporarily to check message contents. can try using another 
+        if(contents=="Digging"){
+            ROS_INFO("DO DIGGING STUFF HERE");
+        } else if(contents=="LinearActuator"){
+            //recieved value ranges from -100 to 100
+            ROS_INFO("DO LINEAR ACTUATOR MOVING STUFF HERE");
+        } else{
+            ROS_INFO("SOMETHING USELESS WAS SENT");
+        }
+        
+        ROS_INFO("RECIEVED %s %d",contents.c_str(), value);
+/*
+        std::string converted =""; //can be replaced with a array of chars or ints later
+        for(size_t i=0;i<value.length();i+=2){
+            converted+= std::to_string((int)(16 * (value[i] - '0') + value[i + 1] - '0'));
+            converted+= ' ';
+        }
+	ROS_INFO("RECIEVED %s",value.c_str());
+	ROS_INFO("CONVERTED %s",converted.c_str());
+*/
         std::stringstream finTopic;
         finTopic << topic << "/" << contents;
         ROS_INFO("SENDING %s", finTopic.str().c_str());
@@ -119,7 +139,7 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
 
 int main(int argc, char* argv[]){
     ros::init(argc, argv, "sender");
-	ROS_INFO("Starting");
+	  ROS_INFO("Starting");
     user_callback cb;
     cli.set_callback(cb);
 
