@@ -49,32 +49,53 @@ while not rospy.is_shutdown():
     if received_len:
         msg = PackedMessage()
         msg.channel_name = "EXAMPLE/input"
-        msg.field = 'rawData'
+        #msg.field = 'rawData'
         data = ""
+        hbSum = 0
+        # first 3 recieved bytes are for the heartbeat
+        for i in range(3):
+            hbSum+= received_data[i]
+        #  if there are parameters (4th byte indicates how many target intensity pairs there are)
+        if hbSum != 160 and received_len > 3:
+            for i in range(received_data[3] / 2):
+                target = received_data[2 * i + 4]
+                if target==1: #current command for digging
+                    msg.value = received_data[2 * i + 5]
+                    msg.field = "Digging"
+                    rospy.loginfo("Sending digging value %d",msg.value)
+                    pub.publish(msg)
+                if target==7:# linear actuator need to make sure it is up or down
+                    msg.value = (received_data[2 * i + 5] - 50) * 2
+                    msg.field = "LinearActuator"
+                    rospy.loginfo("Sending linear actuator value %d",msg.value)
+                    pub.publish(msg)
+                        
+        conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))    
+            
+	"""
         dataHex=""
         sum=0
         for i in range(received_len):
             data += str(received_data[i])
-            data +=" "
+            data += " "
             dataHex += byte_to_hex(received_data[i])
             sum += received_data[i]
-        """
+            
         #converts data recieved to a hex string to be converted on the reciever
-        msg.value = dataHex# + data
-        rospy.loginfo(data)
-        pub.publish(msg)
-        """
+        #msg.value = dataHex# + data
+        #rospy.loginfo(data)
+        #pub.publish(msg)
+        
         if sum != 160:
             msg.value = dataHex# + data
             rospy.loginfo(data)
             pub.publish(msg) 
 	
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))
-        """
+        
         if sum != 160:
             rospy.loginfo('Sent ACK')
-            rospy.loginfo("-------------")
-        """
+            rospy.loginfo("-------------")"""
 
     time.sleep(0.01)
 

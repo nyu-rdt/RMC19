@@ -105,7 +105,19 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
     try {
         std::string topic = msg->channel_name;
         std::string contents = msg->field;
-        std::string value = msg->value;
+        int value = msg->value;
+        //will be using field temporarily to check message contents. can try using another 
+        if(contents=="Digging"){
+            ROS_INFO("DO DIGGING STUFF HERE");
+        } else if(contents=="LinearActuator"){
+            //recieved value ranges from -100 to 100
+            ROS_INFO("DO LINEAR ACTUATOR MOVING STUFF HERE");
+        } else{
+            ROS_INFO("SOMETHING USELESS WAS SENT");
+        }
+        
+        ROS_INFO("RECIEVED %s %d",contents.c_str(), value);
+/*
         std::string converted =""; //can be replaced with a array of chars or ints later
         for(size_t i=0;i<value.length();i+=2){
             converted+= std::to_string((int)(16 * (value[i] - '0') + value[i + 1] - '0'));
@@ -113,11 +125,11 @@ void bridgeSender(const rdt_mqtt::PackedMessage::ConstPtr& msg){
         }
 	ROS_INFO("RECIEVED %s",value.c_str());
 	ROS_INFO("CONVERTED %s",converted.c_str());
-
+*/
         std::stringstream finTopic;
         finTopic << topic << "/" << contents;
         ROS_INFO("SENDING %s", finTopic.str().c_str());
-        cli.publish(mqtt::message(finTopic.str(), value, 0, true));
+        cli.publish(mqtt::message(finTopic.str(), std::to_string(value), 0, true));
         ROS_INFO("SENT %s", finTopic.str().c_str());
     }
     catch (const mqtt::exception &ex){
