@@ -14,7 +14,6 @@ const std::string CLIENT_ID("MQTT_Bridge");
 
 //mqtt::client cli;
 
-void* jank;
 
 class in_mem_persistence : virtual public mqtt::iclient_persistence {
   bool openStatus;
