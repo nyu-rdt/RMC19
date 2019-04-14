@@ -4,11 +4,11 @@
 
 #define SERIALSPEED 115200
 
-#define WIFI_SSID "wifi"
-#define WIFI_PASS "pass"
+#define WIFI_SSID "Team_15"
+#define WIFI_PASS "lunabots"
 #define WIFI_CHANNEL 1
 
-#define SERVER_ADDR "10.100.32.196"
+#define SERVER_ADDR "192.168.1.101"
 #define SERVER_PORT 1883
 #define SUBSYSTEM_NAME "digging"
 
@@ -58,17 +58,17 @@ void loop() {
         }
         else if (subPtr == &motorB){
             sendPreamble(1);
-            //sendValue(motorB.lastread);
+            sendValue(motorB.lastread);
             sendStop();
         }
         else if (subPtr == &motorC){
             sendPreamble(2);
-            //sendValue(motorC.lastread);
+            sendValue(motorC.lastread);
             sendStop();
         }
         else if (subPtr == &motorD){
             sendPreamble(3);
-            //sendValue(motorD.lastread);
+            sendValue(motorD.lastread);
             sendStop();
         }
     }
@@ -85,21 +85,18 @@ void mqtt_connect(){
     }
 }
 void sendPreamble(int motor){
-    Serial.write(0x33);
+    Serial.write(0xF0);
     uint8_t motor_byte = 0xFF & motor; 
     Serial.write(motor_byte);
 }
 
 void sendStop(){
-    Serial.write(0x34);
+    Serial.write(0xFF);
 }
 
 void sendValue(uint8_t* data){
     //update when we know what the data looks like over the wire
-    uint8_t value = *(data + 1);
-    Serial.println("----");
-    Serial.println((char*) data);
+    uint8_t value = atoi((char*) data);
     Serial.write(value);
-    Serial.println("----");
 
 }
