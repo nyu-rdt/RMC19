@@ -38,7 +38,7 @@
 
 #define MOTOR_COMM_WIDTH        DOOR_ACTUATOR_COMM + 1
 
-void *motorPinlookup[MOTOR_COMM_WIDTH];
+void *motorPinLookup[MOTOR_COMM_WIDTH];
 motorPinLookup[DRUM_MOTOR_1_COMM] = &DRUM_MOTOR_1; 
 motorPinLookup[DRUM_MOTOR_2_COMM] = &DRUM_MOTOR_2;
 motorPinLookup[LINEAR_ACTUATOR_COMM] = &LINEAR_ACTUATOR; 

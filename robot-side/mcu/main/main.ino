@@ -25,10 +25,10 @@
 int oPhase = 0;
 
 // Serial Definitions
-#define ESPY_BAUD             115200
+#define ESP_BAUD             115200
 #define ROBOTEQ_BAUD          115200
 
-HardwareSerial ESPY = Serial1; // ESPY WiFi Module
+HardwareSerial ESP = Serial1; // ESP WiFi Module
 HardwareSerial BlueMotor = Serial3;
 HardwareSerial PurpleMotor = Serial3;
 HardwareSerial GoldMotor = Serial2;
@@ -69,7 +69,7 @@ void writePhase();
 // ARDUINO FUNCTIONS
 void setup() {
   // start serial ports
-  ESPY.begin(ESPY_BAUD);
+  ESP.begin(ESP_BAUD);
   BlueMotor.begin(ROBOTEQ_BAUD);
   GoldMotor.begin(ROBOTEQ_BAUD);
 
@@ -99,7 +99,7 @@ void loop() {
   }
 }
 
-// This phase reads data from the ESPY into a buffer
+// This phase reads data from the ESP into a buffer
 // It ends once the buffer is full OR after a timeout
 void readPhase() {
   int start = millis(); // when the phase started
@@ -107,11 +107,11 @@ void readPhase() {
 
   while (current - start < READ_TIMEOUT_MILLIS) {
     // If there is a character to read
-    if (ESPY.available() > 0) {
+    if (ESP.available() > 0) {
       // Write to end of the readBuffer
-      readBuffer[readBufferEnd] = ESPY.read();
+      readBuffer[readBufferEnd] = ESP.read();
       ++readBufferEnd;
-      current = millis()
+      current = millis();
 
       // Exit if the readbuffer is full
       if (readBufferEnd > READ_BUFFER_LEN) {
@@ -121,7 +121,7 @@ void readPhase() {
   } 
 }
 
-// This phase will take the received commands from the ESPY and extracts the commands
+// This phase will take the received commands from the ESP and extracts the commands
 // for each motor
 void parsePhase() {
   int nextByteType = 0; // What is the next byte to expect?
@@ -139,7 +139,7 @@ void parsePhase() {
       nextByteType = SENSOR_TYPE;
     }
     else if (nextByteType == MOTOR_TYPE) {
-      motorIdentifier = incomingByte[a];
+      motorIdentifier = readBuffer[a];
       nextByteType = VALUE_TYPE;
     }
     else if (nextByteType == SENSOR_TYPE) {
@@ -152,7 +152,7 @@ void parsePhase() {
       motorExecBuffer[motorIdentifier] = readBuffer[a];
       next_byte_type = STOP_TYPE;
     }
-    else if (next_byte_type == STOP_TYPE && incomingByte[a] == stop_byte){
+    else if (next_byte_type == STOP_TYPE && readBuffer[a] == stop_byte){
       next_byte_type = START_TYPE;
     }
   }
@@ -173,7 +173,7 @@ void parsePhase() {
     // copy data to beginning of buffer
     endOfSegment = 0;
     for (int c = incompleteSegmentStart; c < readBufferEnd; c++){
-      incomingByte[endOfSegment] = incomingByte[c];
+      readBuffer[endOfSegment] = readBuffer[c];
       ++endOfSegment;
     }
 
