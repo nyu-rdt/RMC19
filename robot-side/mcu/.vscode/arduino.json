@@ -1,0 +1,4 @@
+{
+    "board": "arduino:avr:megaADK",
+    "sketch": "Communications.ino"
+}
