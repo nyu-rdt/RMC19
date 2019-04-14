@@ -8,12 +8,12 @@
 #define WIFI_PASS "pass"
 #define WIFI_CHANNEL 1
 
-#define SERVER_ADDR "10.100.32.167"
+#define SERVER_ADDR "10.100.32.196"
 #define SERVER_PORT 1883
-#define SUBSYSTEM_NAME "EXAMPLE"
+#define SUBSYSTEM_NAME "digging"
 
 #define MQTT_RECONNECT_TIMEOUT 200
-#define MQTT_READ_TIMEOUT 50
+#define MQTT_READ_TIMEOUT 500
 
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, SERVER_ADDR, SERVER_PORT, SUBSYSTEM_NAME, "");
@@ -21,10 +21,10 @@ Adafruit_MQTT_Client mqtt(&client, SERVER_ADDR, SERVER_PORT, SUBSYSTEM_NAME, "")
 
 Adafruit_MQTT_Publish rawByteOut = Adafruit_MQTT_Publish(&mqtt, SUBSYSTEM_NAME "/output/rawData");
 Adafruit_MQTT_Subscribe rawByteIn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/input/rawData");
-Adafruit_MQTT_Subscribe motorA = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/digging/motors/a");
-Adafruit_MQTT_Subscribe motorB = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/digging/motors/b");
-Adafruit_MQTT_Subscribe motorC = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/digging/motors/c");
-Adafruit_MQTT_Subscribe motorD = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/digging/motors/d");
+Adafruit_MQTT_Subscribe motorA = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/a");
+Adafruit_MQTT_Subscribe motorB = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/b");
+Adafruit_MQTT_Subscribe motorC = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/a");
+Adafruit_MQTT_Subscribe motorD = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/b");
 
 
 void mqtt_connect();
@@ -51,30 +51,26 @@ void loop() {
     mqtt_connect();
     Adafruit_MQTT_Subscribe* subPtr;
     while ((subPtr = mqtt.readSubscription(MQTT_READ_TIMEOUT))){
-        if (subPtr == motorA){
+        if (subPtr == &motorA){
             sendPreamble(0);
-            sendValue(motorA.lastRead);
+            sendValue(motorA.lastread);
             sendStop();
         }
-        else if (subPtr == motorB){
+        else if (subPtr == &motorB){
             sendPreamble(1);
-            sendValue(motorB.lastRead);
+            //sendValue(motorB.lastread);
             sendStop();
         }
-        else if (subPtr == motorC){
+        else if (subPtr == &motorC){
             sendPreamble(2);
-            sendValue(motorC.lastRead);
+            //sendValue(motorC.lastread);
             sendStop();
         }
-        else if (subPtr == motorD){
+        else if (subPtr == &motorD){
             sendPreamble(3);
-            sendValue(motorD.lastRead);
+            //sendValue(motorD.lastread);
             sendStop();
         }
-    }
-
-    while (Serial.available() > 0){
-        rawByteOut.publish(Serial.read());
     }
 }
 
@@ -89,17 +85,21 @@ void mqtt_connect(){
     }
 }
 void sendPreamble(int motor){
-    Serial.write(0xF0);
+    Serial.write(0x33);
     uint8_t motor_byte = 0xFF & motor; 
     Serial.write(motor_byte);
 }
 
 void sendStop(){
-    Serial.write(0xFF);
+    Serial.write(0x34);
 }
 
-void sendValue(void* data){
+void sendValue(uint8_t* data){
     //update when we know what the data looks like over the wire
-    int value = *((int*)data);
+    uint8_t value = *(data + 1);
+    Serial.println("----");
+    Serial.println((char*) data);
     Serial.write(value);
+    Serial.println("----");
+
 }
