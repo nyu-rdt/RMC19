@@ -47,9 +47,6 @@ while not rospy.is_shutdown():
         received_len = 0
 
     if received_len:
-        msg = PackedMessage()
-        msg.channel_name = "EXAMPLE/input"
-        #msg.field = 'rawData'
         data = ""
         hbSum = 0
         # first 3 recieved bytes are for the heartbeat
@@ -60,14 +57,22 @@ while not rospy.is_shutdown():
             for i in range(received_data[3] / 2):
                 target = received_data[2 * i + 4]
                 if target==1: #current command for digging
+                    msg = PackedMessage() 
+                    msg.channel_name = "digging/motors"
                     msg.value = received_data[2 * i + 5]
-                    msg.field = "Digging"
+                    msg.field = "a"
                     rospy.loginfo("Sending digging value %d",msg.value)
                     pub.publish(msg)
+                    msg.field = "b"
+                    pub.publish(msg)
                 if target==7:# linear actuator need to make sure it is up or down
+                    msg = PackedMessage() 
+                    msg.channel_name = "digging/linearActuator"
                     msg.value = (received_data[2 * i + 5] - 50) * 2
-                    msg.field = "LinearActuator"
+                    msg.field = "a"
                     rospy.loginfo("Sending linear actuator value %d",msg.value)
+                    pub.publish(msg)
+                    msg.field = "b"
                     pub.publish(msg)
                         
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))    
