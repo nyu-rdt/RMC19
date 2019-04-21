@@ -1,3 +1,5 @@
+#include <Servo.h>
+
 // These are the definiions for the phase numbers
 #define READ_PHASE_NO         0
 #define PARSE_PHASE_NO        1
@@ -59,6 +61,9 @@ int MiscSensor = A14;
 // Misc
 int DebugLED = 13;
 
+// Servo Definition
+Servo ServoCtrl;
+
 // DRUM PIN MAPPINGS
 // Include drum protocol definitions
 // Drum protocol definitions
@@ -119,6 +124,16 @@ void setup() {
   ESPY.begin(ESPY_BAUD);
   BlueMotor.begin(ROBOTEQ_BAUD);
   GoldMotor.begin(ROBOTEQ_BAUD);
+
+  // Pin modes
+  pinMode(Pullup1, INPUT);
+  pinMode(Pullup2, INPUT);
+  pinMode(Pullup4, INPUT);
+  pinMode(Pullup5, INPUT);
+  pinMode(DebugLED, OUTPUT);
+  pinMode(VibrationMotorEnable, OUTPUT);
+
+  ServoCtrl.attach(ServoPWM);
 
   // Initialize motorExecBuffer to all 127
   memset(motorExecBuffer, MOTOR_STOP, MOTOR_COMM_WIDTH);
@@ -232,17 +247,17 @@ void parsePhase() {
 }
 
 // Execute phase writes commands to actual electronics
-void execPhase() {
-  unsigned int scaled;
-  
+void execPhase() {  
   for (int i = 1; i < MOTOR_COMM_WIDTH; i = i << 1) {
-    scaled = (unsigned)motorExecBuffer[i] * 205 / 255 + 204;
-    
-    if (*(HardwareSerial *)motorPinlookup[i] == BlueMotor || *(HardwareSerial *)motorPinlookup[i] == GoldMotor) {
+    if ((HardwareSerial *)motorPinlookup[i] == &BlueMotor || (HardwareSerial *)motorPinlookup[i] == &GoldMotor) {
       // This is a SerialPort, gotta do something with that later
       continue;
     }
-    analogWrite(*(int *)motorPinlookup[i], scaled);
+    else if ((Servo *)motorPinlookup[i] == &ServoCtrl) {
+      // This is a Servo motor, gotta do something with that later
+      continue;
+    }
+    analogWrite(*(int *)motorPinlookup[i], motorExecBuffer[i]);
   }
 
   for (int i = 1; i < SENSOR_COMM_WIDTH; i = i << 1) {
@@ -285,7 +300,7 @@ void initializeDrumMappings() {
   motorPinlookup[DRUM_MOTOR_2_COMM] = (void *)&GoldMotor;
   motorPinlookup[LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
   motorPinlookup[VIBRATION_MOTOR_COMM] = (void *)&VibrationMotorEnable;
-  motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoPWM;
+  motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoCtrl;
   
   sensorPinlookup[LINEAR_POT_COMM] = (void *)&LinearPot;
   sensorPinlookup[MAGNETIC_1_COMM] = (void *)&Pullup1;
