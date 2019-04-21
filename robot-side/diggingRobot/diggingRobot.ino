@@ -8,12 +8,12 @@
 #define WIFI_PASS "lunabots"
 #define WIFI_CHANNEL 1
 
-#define SERVER_ADDR "192.168.1.101"
+#define SERVER_ADDR "192.168.1.104"
 #define SERVER_PORT 1883
 #define SUBSYSTEM_NAME "digging"
 
 #define MQTT_RECONNECT_TIMEOUT 200
-#define MQTT_READ_TIMEOUT 500
+#define MQTT_READ_TIMEOUT 500  
 
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, SERVER_ADDR, SERVER_PORT, SUBSYSTEM_NAME, "");

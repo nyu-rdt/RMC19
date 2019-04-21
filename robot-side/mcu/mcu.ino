@@ -32,11 +32,11 @@
 #define MOTOR_FULL_FORWARD    0
 
 // Serial Definitions
-#define ESPY_BAUD             115200
+#define ESP_BAUD             115200
 #define ROBOTEQ_BAUD          115200
 
 // Serial Port Mappings
-HardwareSerial ESPY = Serial1; // ESPY WiFi Module
+HardwareSerial ESP = Serial1; // ESP WiFi Module
 HardwareSerial BlueMotor = Serial3;
 HardwareSerial PurpleMotor = Serial3;
 HardwareSerial GoldMotor = Serial2;
@@ -121,7 +121,7 @@ void writePhase();
 // ARDUINO FUNCTIONS
 void setup() {
   // start serial ports
-  ESPY.begin(ESPY_BAUD);
+  ESP.begin(ESP_BAUD);
   BlueMotor.begin(ROBOTEQ_BAUD);
   GoldMotor.begin(ROBOTEQ_BAUD);
 
@@ -134,16 +134,19 @@ void setup() {
   pinMode(VibrationMotorEnable, OUTPUT);
 
   ServoCtrl.attach(ServoPWM);
-
+  
   // Initialize motorExecBuffer to all 127
   memset(motorExecBuffer, MOTOR_STOP, MOTOR_COMM_WIDTH);
   // Initialize sensorExecBuffer to all 0
   memset(sensorExecBuffer, SENSOR_DISABLE, SENSOR_COMM_WIDTH);
 
   initializeDrumMappings();
+  Serial2.begin(115200);
+  Serial2.write(0x55);
 }
 
 void loop() {
+  //Serial2.write(0xff);
   // main loop to switch between phases
   if (oPhase == READ_PHASE_NO) {
     readPhase();
@@ -163,7 +166,7 @@ void loop() {
   }
 }
 
-// This phase reads data from the ESPY into a buffer
+// This phase reads data from the ESP into a buffer
 // It ends once the buffer is full OR after a timeout
 void readPhase() {
   int starttime = millis(); // when the phase started
@@ -171,23 +174,26 @@ void readPhase() {
 
   while (current - starttime < READ_TIMEOUT_MILLIS) {
     // If there is a character to read
-    if (ESPY.available() > 0) {
+    if (ESP.available() > 0) {
       // Write to end of the readBuffer
-      readBuffer[readBufferEnd] = ESPY.read();
+      
+      readBuffer[readBufferEnd] = ESP.read();
+      //Serial2.write(readBuffer[readBufferEnd]);
       ++readBufferEnd;
-      current = millis();
 
       // Exit if the readbuffer is full
       if (readBufferEnd > READ_BUFFER_LEN) {
         break;
       }
+      current = millis();
     }
   } 
 }
 
-// This phase will take the received commands from the ESPY and extracts the commands
+// This phase will take the received commands from the ESP and extracts the commands
 // for each motor
 void parsePhase() {
+  Serial2.write(0x55);
   int nextByteType = 0; // What is the next byte to expect?
   int motorIdentifier = 0; // What motor to expect a value for?
   // variables for recovering incomplete segments
@@ -258,7 +264,7 @@ void execPhase() {
       continue;
     }
     analogWrite(*(int *)motorPinlookup[i], motorExecBuffer[i]);
-  }
+] }
 
   for (int i = 1; i < SENSOR_COMM_WIDTH; i = i << 1) {
     if (sensorExecBuffer[i] == SENSOR_ENABLE) {
@@ -275,7 +281,7 @@ void execPhase() {
   }
 }
 
-// This phase write the collected sensor values to the ESPY module
+// This phase write the collected sensor values to the ESP module
 void writePhase() {
   int unscaled;
   
@@ -296,8 +302,8 @@ void writePhase() {
 
 // ROVER DEFINITIONS
 void initializeDrumMappings() {
-  motorPinlookup[DRUM_MOTOR_1_COMM] = (void *)&BlueMotor; // If using PWM, replace with BlueMotorPWM
-  motorPinlookup[DRUM_MOTOR_2_COMM] = (void *)&GoldMotor;
+  motorPinlookup[DRUM_MOTOR_1_COMM] = (void *)&BlueMotorPWM; // If using PWM, replace with BlueMotorPWM
+  motorPinlookup[DRUM_MOTOR_2_COMM] = (void *)&GoldMotorPWM;
   motorPinlookup[LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
   motorPinlookup[VIBRATION_MOTOR_COMM] = (void *)&VibrationMotorEnable;
   motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoCtrl;
