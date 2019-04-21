@@ -15,7 +15,8 @@ client.connect('127.0.0.1')
 
 client.publish("digging/{}".format(m), payload=power, qos=0, retain=False)
 print("motor: {} power: {}".format(m, power))
-if (int(sys.argv[3]) == 1):
-    time.sleep(0.5)
-    client.publish("digging/{}".format(m), payload=0x7F, qos=0, retain=False)
-    print("stopping")
+if (len(sys.argv) >3):
+    if (int(sys.argv[3]) == 1):
+        time.sleep(0.5)
+        client.publish("digging/{}".format(m), payload=0x7F, qos=0, retain=False)
+        print("stopping")
