@@ -52,22 +52,22 @@ void loop() {
     Adafruit_MQTT_Subscribe* subPtr;
     while ((subPtr = mqtt.readSubscription(MQTT_READ_TIMEOUT))){
         if (subPtr == &motorA){
-            sendPreamble(0);
+            sendPreamble(1);
             sendValue(motorA.lastread);
             sendStop();
         }
         else if (subPtr == &motorB){
-            sendPreamble(1);
+            sendPreamble(2);
             sendValue(motorB.lastread);
             sendStop();
         }
         else if (subPtr == &motorC){
-            sendPreamble(2);
+            sendPreamble(3);
             sendValue(motorC.lastread);
             sendStop();
         }
         else if (subPtr == &motorD){
-            sendPreamble(3);
+            sendPreamble(4);
             sendValue(motorD.lastread);
             sendStop();
         }

@@ -16,7 +16,7 @@
 
 // Constants for read phase (parameters)
 #define READ_BUFFER_LEN       256
-#define READ_TIMEOUT_MILLIS   100    
+#define READ_TIMEOUT_MILLIS   1500    
 
 // constants for parse phase (define byte types)
 #define MOTOR_TYPE            1
@@ -122,8 +122,8 @@ void writePhase();
 void setup() {
   // start serial ports
   ESP.begin(ESP_BAUD);
-  BlueMotor.begin(ROBOTEQ_BAUD);
-  GoldMotor.begin(ROBOTEQ_BAUD);
+  //BlueMotor.begin(ROBOTEQ_BAUD);
+  //GoldMotor.begin(ROBOTEQ_BAUD);
 
   // Pin modes
   pinMode(Pullup1, INPUT);
@@ -132,7 +132,12 @@ void setup() {
   pinMode(Pullup5, INPUT);
   pinMode(DebugLED, OUTPUT);
   pinMode(VibrationMotorEnable, OUTPUT);
-
+  
+  pinMode(BlueMotorPWM, OUTPUT);
+  pinMode(GoldMotorPWM, OUTPUT);
+  pinMode(PurpleMotorPWM, OUTPUT);
+  pinMode(BlackMotorPWM, OUTPUT);
+  
   ServoCtrl.attach(ServoPWM);
   
   // Initialize motorExecBuffer to all 127
@@ -141,12 +146,13 @@ void setup() {
   memset(sensorExecBuffer, SENSOR_DISABLE, SENSOR_COMM_WIDTH);
 
   initializeDrumMappings();
+  Serial1.begin(115200);
   Serial2.begin(115200);
-  Serial2.write(0x55);
+  //Serial2.write(0x55);
 }
 
 void loop() {
-  //Serial2.write(0xff);
+  ////Serial2.write(0xff);
   // main loop to switch between phases
   if (oPhase == READ_PHASE_NO) {
     readPhase();
@@ -174,7 +180,7 @@ void readPhase() {
 
   while (current - starttime < READ_TIMEOUT_MILLIS) {
     // If there is a character to read
-    if (ESP.available() > 0) {
+    while (ESP.available() > 0) {
       // Write to end of the readBuffer
       
       readBuffer[readBufferEnd] = ESP.read();
@@ -183,18 +189,24 @@ void readPhase() {
 
       // Exit if the readbuffer is full
       if (readBufferEnd > READ_BUFFER_LEN) {
+        //Serial2.write(0xbc);
         break;
-      }
-      current = millis();
     }
+    }
+    if (readBufferEnd > READ_BUFFER_LEN) {
+        //Serial2.write(0xbb);
+        break;
+    }
+      delay(10);
+      current = millis();
   } 
 }
 
 // This phase will take the received commands from the ESP and extracts the commands
 // for each motor
 void parsePhase() {
-  Serial2.write(0x55);
-  int nextByteType = 0; // What is the next byte to expect?
+  ////Serial2.write(0x55);
+  int nextByteType = START_TYPE; // What is the next byte to expect?
   int motorIdentifier = 0; // What motor to expect a value for?
   // variables for recovering incomplete segments
   int endOfSegment = 0;
@@ -250,6 +262,7 @@ void parsePhase() {
     // move read buffer end pointer to end of copied segment
     readBufferEnd = endOfSegment;
   }
+  //delay(100);
 }
 
 // Execute phase writes commands to actual electronics
@@ -263,9 +276,14 @@ void execPhase() {
       // This is a Servo motor, gotta do something with that later
       continue;
     }
-    analogWrite(*(int *)motorPinlookup[i], motorExecBuffer[i]);
-] }
-
+    /*//Serial2.write(0x70);
+    //Serial2.write(*(int *)motorPinlookup[i]);
+    //Serial2.write(motorExecBuffer[i]);
+    //Serial2.write(0xAA);*/
+    int tmp = *(int *)motorPinlookup[i];
+    analogWrite(tmp, (int)motorExecBuffer[i]);
+ }
+/*
   for (int i = 1; i < SENSOR_COMM_WIDTH; i = i << 1) {
     if (sensorExecBuffer[i] == SENSOR_ENABLE) {
       if (*(int *)sensorPinlookup[i] > A0) { // Analog pin
@@ -278,7 +296,7 @@ void execPhase() {
         sensorValueBuffer[i] = digitalRead(*(int *)sensorPinlookup[i]);
       }
     }
-  }
+  }*/
 }
 
 // This phase write the collected sensor values to the ESP module
