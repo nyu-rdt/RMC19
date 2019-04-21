@@ -9,7 +9,7 @@ motors = ['motors/a', 'motors/b', 'linearActuator/a', 'linearActuator/b']
 
 
 m = motors[int(sys.argv[1])]
-power = int(int(sys.argv[2])+100/200 * 255)
+power = int((int(sys.argv[2])+100)/200 * 255)
 client = mqtt.Client()
 client.connect('127.0.0.1')
 
