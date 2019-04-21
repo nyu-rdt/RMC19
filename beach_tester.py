@@ -5,7 +5,7 @@ import time
 import sys
 
 assert(len(sys.argv) >= 2)
-motors = ['motors/a', 'motors/b', 'linearActuator/a', 'linearActuator/b']
+motors = ['', 'motors/a', 'motors/b', 'linearActuator/a', 'linearActuator/b']
 
 
 m = motors[int(sys.argv[1])]
