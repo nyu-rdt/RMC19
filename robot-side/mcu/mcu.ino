@@ -1,5 +1,3 @@
-#include <Servo.h>
-
 // These are the definiions for the phase numbers
 #define READ_PHASE_NO         0
 #define PARSE_PHASE_NO        1
@@ -62,7 +60,6 @@ int MiscSensor = A14;
 int DebugLED = 13;
 
 // Servo Definition
-Servo ServoCtrl;
 
 // DRUM PIN MAPPINGS
 // Include drum protocol definitions
@@ -138,7 +135,7 @@ void setup() {
   pinMode(PurpleMotorPWM, OUTPUT);
   pinMode(BlackMotorPWM, OUTPUT);
   
-  ServoCtrl.attach(ServoPWM);
+//  ServoCtrl.attach(ServoPWM);
   
   // Initialize motorExecBuffer to all 127
   memset(motorExecBuffer, MOTOR_STOP, MOTOR_COMM_WIDTH);
@@ -268,19 +265,15 @@ void parsePhase() {
 // Execute phase writes commands to actual electronics
 void execPhase() {  
   for (int i = 1; i < MOTOR_COMM_WIDTH; i = i << 1) {
+    int tmp = *(int *)motorPinlookup[i];
     if ((HardwareSerial *)motorPinlookup[i] == &BlueMotor || (HardwareSerial *)motorPinlookup[i] == &GoldMotor) {
       // This is a SerialPort, gotta do something with that later
-      continue;
-    }
-    else if ((Servo *)motorPinlookup[i] == &ServoCtrl) {
-      // This is a Servo motor, gotta do something with that later
       continue;
     }
     /*//Serial2.write(0x70);
     //Serial2.write(*(int *)motorPinlookup[i]);
     //Serial2.write(motorExecBuffer[i]);
     //Serial2.write(0xAA);*/
-    int tmp = *(int *)motorPinlookup[i];
     analogWrite(tmp, (int)motorExecBuffer[i]);
  }
 /*
@@ -324,7 +317,7 @@ void initializeDrumMappings() {
   motorPinlookup[DRUM_MOTOR_2_COMM] = (void *)&GoldMotorPWM;
   motorPinlookup[LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
   motorPinlookup[VIBRATION_MOTOR_COMM] = (void *)&VibrationMotorEnable;
-  motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoCtrl;
+  motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoPWM;
   
   sensorPinlookup[LINEAR_POT_COMM] = (void *)&LinearPot;
   sensorPinlookup[MAGNETIC_1_COMM] = (void *)&Pullup1;
