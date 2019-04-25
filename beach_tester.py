@@ -9,7 +9,8 @@ motors = ['', 'motors/a', 'motors/b', 'linearActuator/a', 'linearActuator/b']
 
 
 m = motors[int(sys.argv[1])]
-power = int((int(sys.argv[2])+100)/200 * 255)
+#power = int((int(sys.argv[2])+100)/200 * 255)
+power=int(sys.argv[2])
 client = mqtt.Client()
 client.connect('127.0.0.1')
 
@@ -18,5 +19,5 @@ print("motor: {} power: {}".format(m, power))
 if (len(sys.argv) >3):
     if (int(sys.argv[3]) == 1):
         time.sleep(0.5)
-        client.publish("digging/{}".format(m), payload=0x7F, qos=0, retain=False)
+        client.publish("digging/{}".format(m), payload=0x00, qos=0, retain=False)
         print("stopping")
