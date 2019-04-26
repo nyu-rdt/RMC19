@@ -14,7 +14,7 @@
 
 // Constants for read phase (parameters)
 #define READ_BUFFER_LEN       256
-#define READ_TIMEOUT_MILLIS   1500    
+#define READ_TIMEOUT_MILLIS   50  
 
 // constants for parse phase (define byte types)
 #define MOTOR_TYPE            1
@@ -25,9 +25,9 @@
 
 #define SENSOR_DISABLE        0
 #define SENSOR_ENABLE         1
-#define MOTOR_STOP            127
-#define MOTOR_FULL_REVERSE    0
-#define MOTOR_FULL_FORWARD    0
+#define MOTOR_STOP            0
+#define MOTOR_FULL_REVERSE    255
+#define MOTOR_FULL_FORWARD    127
 
 // Serial Definitions
 #define ESP_BAUD             115200
@@ -39,6 +39,9 @@ HardwareSerial BlueMotor = Serial3;
 HardwareSerial PurpleMotor = Serial3;
 HardwareSerial GoldMotor = Serial2;
 HardwareSerial BlackMotor = Serial2;
+
+// How many motors are on a single controller channel (set to two for dual channel controller)
+int motorsPerChannel = 1;
 
 // Pin Mappings
 // Motors
@@ -53,20 +56,22 @@ int ServoPWM = 23;
 int LinearPot = 14;
 int Pullup1 = 15;
 int Pullup2 = 16;
+int Pullup3 = A5;
 int Pullup4 = 25;
 int Pullup5 = 26;
+int Pullup6 = 12;
 int MiscSensor = A14;
 // Misc
 int DebugLED = 13;
 
 // Servo Definition
 
-// DRUM PIN MAPPINGS
+// DRUM COMMUNICATIONS CODES
 // Include drum protocol definitions
 // Drum protocol definitions
 #define DRUM_MOTOR_1_COMM       0x01
 #define DRUM_MOTOR_2_COMM       0x02
-#define LINEAR_ACTUATOR_COMM    0x04
+#define DRUM_LINEAR_ACTUATOR_COMM    0x04
 #define VIBRATION_MOTOR_COMM    0x08
 #define DOOR_ACTUATOR_COMM      0x10
 
@@ -79,7 +84,32 @@ int DebugLED = 13;
 #define TOP_LIMIT_COMM          0x40
 #define BOTTOM_LIMIT_COMM       0x80
 
-// Motor lookup
+// DEPO COMMUNICATIONS CODES
+// Include depo protocol definitions
+// depo protocol definitions
+#define DEPO_MOTOR_1_COMM       0x01
+#define DEPO_MOTOR_2_COMM       0x02
+#define DEPO_LINEAR_ACTUATOR_COMM    0x04
+
+#define POS_LIMIT_1_COMM        0x01
+#define POS_LIMIT_2_COMM        0x02
+#define RACK_LIMIT_L_1_COMM     0x04
+#define RACK_LIMIT_L_2_COMM     0x08
+#define RACK_LIMIT_R_1_COMM     0x10
+#define RACK_LIMIT_R_2_COMM     0x20
+
+// LOCO COMMUNICATIONS CODES
+// Include loco protocol definitions
+// Loco protocol definitions
+#define LOCO_MOTOR_LF_COMM      0x01
+#define LOCO_MOTOR_LB_COMM      0x02
+#define LOCO_MOTOR_RF_COMM      0x04
+#define LOCO_MOTOR_RB_COMM      0x08
+
+#define FORKLIFT_LIMIT_1_COMM   0x01
+#define FORKLIFT_LIMIT_2_COMM   0x02
+
+// Motor lookup DRUM
 #define MOTOR_LOOKUP
 #define MOTOR_COMM_WIDTH        DOOR_ACTUATOR_COMM + 1
 
@@ -91,7 +121,12 @@ void *motorPinlookup[MOTOR_COMM_WIDTH];
 
 void *sensorPinlookup[SENSOR_COMM_WIDTH]; 
 
+int numMotors;
+int numSensors;
+
 // Pin mappings
+void initializeDepoMappings();
+void initializeLocoMappings();
 void initializeDrumMappings();
 ////////////////////
 
@@ -108,10 +143,11 @@ int sensorExecBuffer[SENSOR_COMM_WIDTH];
 int sensorValueBuffer[SENSOR_COMM_WIDTH];
 
 // Function prototypes
-void readPhase();
-void parsePhase();
-void execPhase();
-void writePhase();
+// They return the number indicator of the next phase to enter
+int readPhase();
+int parsePhase();
+int execPhase();
+int writePhase();
 /////////////////
 
 
@@ -119,14 +155,16 @@ void writePhase();
 void setup() {
   // start serial ports
   ESP.begin(ESP_BAUD);
-  //BlueMotor.begin(ROBOTEQ_BAUD);
-  //GoldMotor.begin(ROBOTEQ_BAUD);
+  BlueMotor.begin(ROBOTEQ_BAUD);
+  GoldMotor.begin(ROBOTEQ_BAUD);
 
   // Pin modes
   pinMode(Pullup1, INPUT);
   pinMode(Pullup2, INPUT);
+  pinMode(Pullup3, INPUT);
   pinMode(Pullup4, INPUT);
   pinMode(Pullup5, INPUT);
+  pinMode(Pullup6, INPUT);
   pinMode(DebugLED, OUTPUT);
   pinMode(VibrationMotorEnable, OUTPUT);
   
@@ -134,75 +172,71 @@ void setup() {
   pinMode(GoldMotorPWM, OUTPUT);
   pinMode(PurpleMotorPWM, OUTPUT);
   pinMode(BlackMotorPWM, OUTPUT);
-  
-//  ServoCtrl.attach(ServoPWM);
-  
-  // Initialize motorExecBuffer to all 127
+    
+  // Initialize motorExecBuffer to STOP VALUE
   memset(motorExecBuffer, MOTOR_STOP, MOTOR_COMM_WIDTH);
   // Initialize sensorExecBuffer to all 0
   memset(sensorExecBuffer, SENSOR_DISABLE, SENSOR_COMM_WIDTH);
 
+  // Uncomment line based on robot type
   initializeDrumMappings();
-  Serial1.begin(115200);
-  Serial2.begin(115200);
-  //Serial2.write(0x55);
+  //  initializeDepoMappings();
+  //  initializeLocoMappings();
 }
 
 void loop() {
-  ////Serial2.write(0xff);
   // main loop to switch between phases
   if (oPhase == READ_PHASE_NO) {
-    readPhase();
-    oPhase = PARSE_PHASE_NO;
+    oPhase = readPhase();
   }
   else if (oPhase == PARSE_PHASE_NO) {
-    parsePhase();
-    oPhase = EXEC_PHASE_NO;
+    oPhase = parsePhase();
   }
   else if (oPhase == EXEC_PHASE_NO) {
-    execPhase();
-    oPhase = WRITE_PHASE_NO;
+    oPhase = execPhase();
   }
   else if (oPhase == WRITE_PHASE_NO) {
-    writePhase();
-    oPhase = READ_PHASE_NO;
+    oPhase = writePhase();
   }
 }
 
 // This phase reads data from the ESP into a buffer
 // It ends once the buffer is full OR after a timeout
-void readPhase() {
+int readPhase() {
   int starttime = millis(); // when the phase started
   int current = millis(); // current time of the phase
 
   while (current - starttime < READ_TIMEOUT_MILLIS) {
     // If there is a character to read
-    while (ESP.available() > 0) {
-      // Write to end of the readBuffer
-      
+    if (ESP.available() > 0) {
+      // Write to end of the readBuffer      
       readBuffer[readBufferEnd] = ESP.read();
-      //Serial2.write(readBuffer[readBufferEnd]);
+      
+      // Increment end of read buffer
       ++readBufferEnd;
 
-      // Exit if the readbuffer is full
-      if (readBufferEnd > READ_BUFFER_LEN) {
-        //Serial2.write(0xbc);
-        break;
-    }
-    }
-    if (readBufferEnd > READ_BUFFER_LEN) {
-        //Serial2.write(0xbb);
-        break;
-    }
-      delay(10);
+      // Reset the timeout
       current = millis();
-  } 
+    }
+    // Exit if the readbuffer is full
+    if (readBufferEnd >= READ_BUFFER_LEN) {
+        break;
+    }
+  }
+
+  // If the read buffer is still empty, repeat the current phase
+  if (readBufferEnd == 0) {
+    delay(10);
+    return READ_PHASE_NO;
+  }
+  
+  // Continue into the next phase
+  return PARSE_PHASE_NO;
 }
 
 // This phase will take the received commands from the ESP and extracts the commands
 // for each motor
-void parsePhase() {
-  ////Serial2.write(0x55);
+int parsePhase() {
   int nextByteType = START_TYPE; // What is the next byte to expect?
   int motorIdentifier = 0; // What motor to expect a value for?
   // variables for recovering incomplete segments
@@ -259,25 +293,30 @@ void parsePhase() {
     // move read buffer end pointer to end of copied segment
     readBufferEnd = endOfSegment;
   }
-  //delay(100);
+
+  // Continue to exec_phase
+  return EXEC_PHASE_NO;
 }
 
 // Execute phase writes commands to actual electronics
-void execPhase() {  
-  for (int i = 1; i < MOTOR_COMM_WIDTH; i = i << 1) {
+int execPhase() {
+  int dataflag = 0; // Whether or not data was read from the sensors
+  // Update the motors
+  for (int motorIndex = 0; motorIndex < numMotors; ++motorIndex) {
+    int i = 1 << motorIndex;
     int tmp = *(int *)motorPinlookup[i];
     if ((HardwareSerial *)motorPinlookup[i] == &BlueMotor || (HardwareSerial *)motorPinlookup[i] == &GoldMotor) {
-      // This is a SerialPort, gotta do something with that later
+      String chan = String((motorIndex % motorsPerChannel) + 1);
+      String power = String(tmp);
+      (*(HardwareSerial *)motorPinlookup[i]).println("!G " + chan + " " + power + "\r");
       continue;
     }
-    /*//Serial2.write(0x70);
-    //Serial2.write(*(int *)motorPinlookup[i]);
-    //Serial2.write(motorExecBuffer[i]);
-    //Serial2.write(0xAA);*/
+    // Write to the serial port
     analogWrite(tmp, (int)motorExecBuffer[i]);
- }
-/*
-  for (int i = 1; i < SENSOR_COMM_WIDTH; i = i << 1) {
+  }
+  // Update the sensors
+  for (int sensorIndex = 0; sensorIndex < numSensors; ++sensorIndex) {
+    int i = 1 << sensorIndex;
     if (sensorExecBuffer[i] == SENSOR_ENABLE) {
       if (*(int *)sensorPinlookup[i] > A0) { // Analog pin
         sensorValueBuffer[i] = analogRead(*(int *)sensorPinlookup[i]);
@@ -289,14 +328,22 @@ void execPhase() {
         sensorValueBuffer[i] = digitalRead(*(int *)sensorPinlookup[i]);
       }
     }
-  }*/
+  }
+
+  // If no data was read from the sensors, no need to write back
+  if (dataflag == 0) {
+    return READ_PHASE_NO;
+  }
+
+  return WRITE_PHASE_NO;
 }
 
 // This phase write the collected sensor values to the ESP module
-void writePhase() {
+int writePhase() {
   int unscaled;
   
-  for (int i = 1; i < SENSOR_COMM_WIDTH; i = i << 1) {
+  for (int sensorIndex = 0; sensorIndex < numSensors; ++sensorIndex) {
+    int i = 1 << sensorIndex;
     if (sensorExecBuffer[i] == SENSOR_ENABLE) {
       unscaled = sensorValueBuffer[i]; // TODO: unscale value from 10-bits to 8-bits
       
@@ -308,14 +355,19 @@ void writePhase() {
       sensorExecBuffer[i] = SENSOR_DISABLE;
     }
   }
+
+  return READ_PHASE_NO;
 }
 
 
 // ROVER DEFINITIONS
 void initializeDrumMappings() {
+  numMotors = 5;
+  numSensors = 8;
+  
   motorPinlookup[DRUM_MOTOR_1_COMM] = (void *)&BlueMotorPWM; // If using PWM, replace with BlueMotorPWM
   motorPinlookup[DRUM_MOTOR_2_COMM] = (void *)&GoldMotorPWM;
-  motorPinlookup[LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
+  motorPinlookup[DRUM_LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
   motorPinlookup[VIBRATION_MOTOR_COMM] = (void *)&VibrationMotorEnable;
   motorPinlookup[DOOR_ACTUATOR_COMM] = (void *)&ServoPWM;
   
@@ -327,4 +379,34 @@ void initializeDrumMappings() {
   sensorPinlookup[DRUMENC_2_COMM] = (void *)&GoldMotor;
   sensorPinlookup[TOP_LIMIT_COMM] = (void *)&Pullup4;
   sensorPinlookup[BOTTOM_LIMIT_COMM] = (void *)&Pullup5;
+}
+
+void initializeDepoMappings() {
+  numMotors = 3;
+  numSensors = 6;
+  
+  motorPinlookup[DEPO_MOTOR_1_COMM] = (void *)&BlueMotor; // If using PWM, replace with BlueMotorPWM
+  motorPinlookup[DEPO_MOTOR_2_COMM] = (void *)&GoldMotor;
+  motorPinlookup[DEPO_LINEAR_ACTUATOR_COMM] = (void *)&GreenMotorPWM;
+  
+  sensorPinlookup[POS_LIMIT_1_COMM] = (void *)&Pullup1;
+  sensorPinlookup[POS_LIMIT_2_COMM] = (void *)&Pullup2;
+  sensorPinlookup[RACK_LIMIT_L_1_COMM] = (void *)&Pullup3;
+  sensorPinlookup[RACK_LIMIT_L_2_COMM] = (void *)&Pullup4;
+  sensorPinlookup[RACK_LIMIT_R_1_COMM] = (void *)&Pullup5;
+  sensorPinlookup[RACK_LIMIT_R_2_COMM] = (void *)&Pullup6;
+}
+
+void initializeLocoMappings() {
+  numMotors = 4;
+  numSensors = 2;
+  motorsPerChannel = 2; // Locomotion uses 2 motors per channel
+  
+  motorPinlookup[LOCO_MOTOR_LF_COMM] = (void *)&BlueMotor; // If using PWM, replace with BlueMotorPWM
+  motorPinlookup[LOCO_MOTOR_LB_COMM] = (void *)&BlueMotor;
+  motorPinlookup[LOCO_MOTOR_RF_COMM] = (void *)&GoldMotor;
+  motorPinlookup[LOCO_MOTOR_RB_COMM] = (void *)&GoldMotor;
+  
+  sensorPinlookup[FORKLIFT_LIMIT_1_COMM] = (void *)&Pullup1;
+  sensorPinlookup[FORKLIFT_LIMIT_2_COMM] = (void *)&Pullup2;
 }
