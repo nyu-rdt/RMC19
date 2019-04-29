@@ -10,7 +10,7 @@
 
 #define SERVER_ADDR "192.168.1.104"
 #define SERVER_PORT 1883
-#define SUBSYSTEM_NAME "digging"
+#define SUBSYSTEM_NAME "locomotion"
 
 #define MQTT_RECONNECT_TIMEOUT 200
 #define MQTT_READ_TIMEOUT 500  
