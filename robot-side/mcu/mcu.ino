@@ -1,3 +1,12 @@
+// Version 1 of the TEENSY CODE:
+// This code is "Good" it works, but the issue is that the use of a timed out phases
+// means that some of the instructions are being executed slightly after the other instructions
+// due to delays in the propogation of the instructions from the central server to the
+// rovers.
+// Therefore, the next version of the code should not implement timeouts or block execution
+// instead it should dispatch commands upon receiving them.
+// Measured latency: < 0.5s per write command
+
 // These are the definiions for the phase numbers
 #define READ_PHASE_NO         0
 #define PARSE_PHASE_NO        1
@@ -14,7 +23,7 @@
 
 // Constants for read phase (parameters)
 #define READ_BUFFER_LEN       256
-#define READ_TIMEOUT_MILLIS   50  
+#define READ_TIMEOUT_MILLIS   200  
 
 // constants for parse phase (define byte types)
 #define MOTOR_TYPE            1
@@ -136,8 +145,6 @@ void initializeDrumMappings();
 int oPhase = 0;
 
 // Buffers and end-of-buffer pointers
-int readBuffer[READ_BUFFER_LEN];
-int readBufferEnd = 0;
 int motorExecBuffer[MOTOR_COMM_WIDTH];
 int sensorExecBuffer[SENSOR_COMM_WIDTH];
 int sensorValueBuffer[SENSOR_COMM_WIDTH];
@@ -179,123 +186,112 @@ void setup() {
   memset(sensorExecBuffer, SENSOR_DISABLE, SENSOR_COMM_WIDTH);
 
   // Uncomment line based on robot type
-  initializeDrumMappings();
-  //  initializeDepoMappings();
-  //  initializeLocoMappings();
+//  initializeDrumMappings();
+//    initializeDepoMappings();
+    initializeLocoMappings();
 }
 
 void loop() {
   // main loop to switch between phases
-  if (oPhase == READ_PHASE_NO) {
-    oPhase = readPhase();
-  }
-  else if (oPhase == PARSE_PHASE_NO) {
-    oPhase = parsePhase();
-  }
-  else if (oPhase == EXEC_PHASE_NO) {
-    oPhase = execPhase();
-  }
-  else if (oPhase == WRITE_PHASE_NO) {
-    oPhase = writePhase();
-  }
+  parsePhase();
+  //  if (oPhase == READ_PHASE_NO) {
+  //    oPhase = readPhase();
+  //  }
+  //  else if (oPhase == PARSE_PHASE_NO) {
+  //    oPhase = parsePhase();
+  //  }
+  //  else if (oPhase == EXEC_PHASE_NO) {
+  //    oPhase = execPhase();
+  //  }
+  //  else if (oPhase == WRITE_PHASE_NO) {
+  //    oPhase = writePhase();
+  //  }
 }
 
 // This phase reads data from the ESP into a buffer
 // It ends once the buffer is full OR after a timeout
-int readPhase() {
-  int starttime = millis(); // when the phase started
-  int current = millis(); // current time of the phase
-
-  while (current - starttime < READ_TIMEOUT_MILLIS) {
-    // If there is a character to read
-    if (ESP.available() > 0) {
-      // Write to end of the readBuffer      
-      readBuffer[readBufferEnd] = ESP.read();
-      
-      // Increment end of read buffer
-      ++readBufferEnd;
-
-      // Reset the timeout
-      current = millis();
-    }
-    // Exit if the readbuffer is full
-    if (readBufferEnd >= READ_BUFFER_LEN) {
-        break;
-    }
-  }
-
-  // If the read buffer is still empty, repeat the current phase
-  if (readBufferEnd == 0) {
-    delay(10);
-    return READ_PHASE_NO;
-  }
-  
-  // Continue into the next phase
-  return PARSE_PHASE_NO;
-}
+//int readPhase() {
+//  int starttime = millis(); // when the phase started
+//  int current = millis(); // current time of the phase
+//
+//  while (current - starttime < READ_TIMEOUT_MILLIS) {
+//    // If there is a character to read
+//    if (ESP.available() > 0) {
+//      // Write to end of the readBuffer      
+//      readBuffer[readBufferEnd] = ESP.read();
+//      
+//      // Increment end of read buffer
+//      ++readBufferEnd;
+//      // Reset the timeout
+//      delay(10);
+//      starttime = millis();
+//    }
+//    current = millis();
+//    // Exit if the readbuffer is full
+//    if (readBufferEnd >= READ_BUFFER_LEN) {
+//        break;
+//    }
+//  }
+//
+//  // If the read buffer is still empty, repeat the current phase
+//  if (readBufferEnd == 0) {
+//    delay(10);
+//    return READ_PHASE_NO;
+//  }
+//  
+//  // Continue into the next phase
+//  return PARSE_PHASE_NO;
+//}
 
 // This phase will take the received commands from the ESP and extracts the commands
 // for each motor
 int parsePhase() {
   int nextByteType = START_TYPE; // What is the next byte to expect?
   int motorIdentifier = 0; // What motor to expect a value for?
+  int sensorIdentifier = 0; // What motor to expect a value for?
   // variables for recovering incomplete segments
   int endOfSegment = 0;
   int incompleteSegmentStart = 0;
 
-  // For each byte in the read buffer
-  for(int a = 0; a < readBufferEnd; a++) {
-    if (nextByteType == START_TYPE && readBuffer[a] == START_BYTE_MOTOR ) {
-      nextByteType = MOTOR_TYPE;
-    }
-    else if (nextByteType == START_TYPE && readBuffer[a] == START_BYTE_SENSOR) {
-      nextByteType = SENSOR_TYPE;
-    }
-    else if (nextByteType == MOTOR_TYPE) {
-      motorIdentifier = readBuffer[a];
-      nextByteType = VALUE_TYPE;
-    }
-    else if (nextByteType == SENSOR_TYPE) {
-      // Enable sensor read
-      sensorExecBuffer[readBuffer[a]] = SENSOR_ENABLE;
-      nextByteType = STOP_TYPE;
-    }
-    else if (nextByteType == VALUE_TYPE) {
-      // Set motor speed
-      motorExecBuffer[motorIdentifier] = readBuffer[a];
-      nextByteType = STOP_TYPE;
-    }
-    else if (nextByteType == STOP_TYPE && readBuffer[a] == STOP_BYTE){
-      nextByteType = START_TYPE;
-    }
-  }
-
-  // Check for incomplete segments
-  if (nextByteType  == START_TYPE) { // The last byte received was STOP_BYTE
-    readBufferEnd = 0; // Clear the buffer
-  }
-  else {
-    // read backwards until START_BYTE
-    for(int a = readBufferEnd - 1; a >= 0; a--) {
-      if(readBuffer[a] == START_BYTE_MOTOR || readBuffer[a] == START_BYTE_SENSOR){
-        incompleteSegmentStart = a;
-        break;
+  while (nextByteType != START_TYPE) {
+    // For each byte in the read buffer
+    while (ESP.available()) {
+      int currentByte = ESP.read();
+      
+      if (nextByteType == START_TYPE && currentByte == START_BYTE_MOTOR ) {
+        nextByteType = MOTOR_TYPE;
+      }
+      else if (nextByteType == START_TYPE && currentByte == START_BYTE_SENSOR) {
+        nextByteType = SENSOR_TYPE;
+      }
+      else if (nextByteType == MOTOR_TYPE) {
+        motorIdentifier = currentByte;
+        nextByteType = VALUE_TYPE;
+      }
+      else if (nextByteType == SENSOR_TYPE) {
+        // Enable sensor read
+        sensorIdentifier = currentByte;
+        sensorExecBuffer[sensorIdentifier] = SENSOR_ENABLE;
+        nextByteType = STOP_TYPE;
+      }
+      else if (nextByteType == VALUE_TYPE) {
+        // Set motor speed
+        motorExecBuffer[motorIdentifier] = currentByte;
+        nextByteType = STOP_TYPE;
+      }
+      else if (nextByteType == STOP_TYPE && currentByte == STOP_BYTE){
+        nextByteType = START_TYPE;
+        commit(motorIdentifier, sensorIdentifier, motorExecBuffer[motorIdentifier]);
+        motorIdentifier = 0;
+        sensorIdentifier = 0;
+      }
+      else {
+        nextByteType = START_TYPE;
       }
     }
-
-    // copy data to beginning of buffer
-    endOfSegment = 0;
-    for (int c = incompleteSegmentStart; c < readBufferEnd; c++){
-      readBuffer[endOfSegment] = readBuffer[c];
-      ++endOfSegment;
-    }
-
-    // move read buffer end pointer to end of copied segment
-    readBufferEnd = endOfSegment;
+    // Continue to exec_phase
+    return EXEC_PHASE_NO;
   }
-
-  // Continue to exec_phase
-  return EXEC_PHASE_NO;
 }
 
 // Execute phase writes commands to actual electronics
@@ -304,15 +300,19 @@ int execPhase() {
   // Update the motors
   for (int motorIndex = 0; motorIndex < numMotors; ++motorIndex) {
     int i = 1 << motorIndex;
-    int tmp = *(int *)motorPinlookup[i];
+    int motor = *(int *)motorPinlookup[i];
+    int power = (int)motorExecBuffer[i];
+    unsigned int signalPWM = (unsigned long)power * 205 / 255 + 204; // Equation to map from 0-255 ---> 204-409 (12-bit resolution)
+    int signalSerial = (power != 0) * ((power - 128) * 3937)
+    
     if ((HardwareSerial *)motorPinlookup[i] == &BlueMotor || (HardwareSerial *)motorPinlookup[i] == &GoldMotor) {
       String chan = String((motorIndex % motorsPerChannel) + 1);
-      String power = String(tmp);
+      String power = String(signalSerial);
       (*(HardwareSerial *)motorPinlookup[i]).println("!G " + chan + " " + power + "\r");
       continue;
     }
     // Write to the serial port
-    analogWrite(tmp, (int)motorExecBuffer[i]);
+    analogWrite(motor, signalPWM);
   }
   // Update the sensors
   for (int sensorIndex = 0; sensorIndex < numSensors; ++sensorIndex) {
@@ -402,7 +402,7 @@ void initializeLocoMappings() {
   numSensors = 2;
   motorsPerChannel = 2; // Locomotion uses 2 motors per channel
   
-  motorPinlookup[LOCO_MOTOR_LF_COMM] = (void *)&BlueMotor; // If using PWM, replace with BlueMotorPWM
+  motorPinlookup[LOCO_MOTOR_LF_COMM] = (void *)&BlueMotorPWM; // If using PWM, replace with BlueMotorPWM
   motorPinlookup[LOCO_MOTOR_LB_COMM] = (void *)&BlueMotor;
   motorPinlookup[LOCO_MOTOR_RF_COMM] = (void *)&GoldMotor;
   motorPinlookup[LOCO_MOTOR_RB_COMM] = (void *)&GoldMotor;
