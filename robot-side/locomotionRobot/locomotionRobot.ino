@@ -107,9 +107,6 @@ void loop() {
         if (subPtr == &forwardMove){
             forwardMoveAction(forwardMove.lastread);
         }
-        else if (subPtr == &backwardMove){
-            forwardMoveAction(backwardMove.lastread);
-        }
         else if (subPtr == &leftTurn){
             leftMoveAction(leftTurn.lastread);
         }
