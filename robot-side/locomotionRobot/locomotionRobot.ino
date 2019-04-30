@@ -15,16 +15,21 @@
 #define MQTT_RECONNECT_TIMEOUT 200
 #define MQTT_READ_TIMEOUT 500  
 
+#define FL 0x08
+#define FR 0x02
+#define RR 0x04
+#define RL 0x10
+
+
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, SERVER_ADDR, SERVER_PORT, SUBSYSTEM_NAME, "");
 
 
 Adafruit_MQTT_Publish rawByteOut = Adafruit_MQTT_Publish(&mqtt, SUBSYSTEM_NAME "/output/rawData");
 Adafruit_MQTT_Subscribe rawByteIn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/input/rawData");
-Adafruit_MQTT_Subscribe motorA = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/a");
-Adafruit_MQTT_Subscribe motorB = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/b");
-Adafruit_MQTT_Subscribe motorC = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/a");
-Adafruit_MQTT_Subscribe motorD = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/b");
+Adafruit_MQTT_Subscribe forwardMove = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/direction/forward");
+Adafruit_MQTT_Subscribe leftTurn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/turn/left");
+Adafruit_MQTT_Subscribe rightTurn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/turn/right");
 
 
 void mqtt_connect();
@@ -40,36 +45,76 @@ void setup() {
         delay(200);
     }
     mqtt.subscribe(&rawByteIn);
-    mqtt.subscribe(&motorA);
-    mqtt.subscribe(&motorB);
-    mqtt.subscribe(&motorC);
-    mqtt.subscribe(&motorD);
+    mqtt.subscribe(&forwardMove);
+    mqtt.subscribe(&leftTurn);
+    mqtt.subscribe(&rightTurn);
 
+}
+
+
+void forwardMoveAction(uint8_t* power){
+    sendPreamble(FL);
+    sendValue(power);
+    sendStop();
+    sendPreamble(FR);
+    sendValue(power);
+    sendStop();
+    sendPreamble(RL);
+    sendValue(power);
+    sendStop();
+    sendPreamble(RR);
+    sendValue(power);
+    sendStop();
+}
+void leftMoveAction(uint8_t* power){
+    uint8_t value = atoi((char*)power);
+    uint8_t rev = ~(value) + 1;
+    sendPreamble(FL);
+    sendValue(power);
+    sendStop();
+    sendPreamble(FR);
+    sendRaw(rev);
+    sendStop();
+    sendPreamble(RL);
+    sendValue(power);
+    sendStop();
+    sendPreamble(RR);
+    sendRaw(rev);
+    sendStop();
+}
+
+void rightMoveAction(uint8_t* power){
+    uint8_t value = atoi((char*)power);
+    uint8_t rev = ~(value) + 1;
+    sendPreamble(FL);
+    sendRaw(rev);
+    sendStop();
+    sendPreamble(FR);
+    sendValue(power);
+    sendStop();
+    sendPreamble(RL);
+    sendRaw(rev);
+    sendStop();
+    sendPreamble(RR);
+    sendValue(power);
+    sendStop();
 }
 
 void loop() {
     mqtt_connect();
     Adafruit_MQTT_Subscribe* subPtr;
     while ((subPtr = mqtt.readSubscription(MQTT_READ_TIMEOUT))){
-        if (subPtr == &motorA){
-            sendPreamble(1);
-            sendValue(motorA.lastread);
-            sendStop();
+        if (subPtr == &forwardMove){
+            forwardMoveAction(forwardMove.lastread);
         }
-        else if (subPtr == &motorB){
-            sendPreamble(2);
-            sendValue(motorB.lastread);
-            sendStop();
+        else if (subPtr == &backwardMove){
+            forwardMoveAction(backwardMove.lastread);
         }
-        else if (subPtr == &motorC){
-            sendPreamble(3);
-            sendValue(motorC.lastread);
-            sendStop();
+        else if (subPtr == &leftTurn){
+            leftMoveAction(leftTurn.lastread);
         }
-        else if (subPtr == &motorD){
-            sendPreamble(4);
-            sendValue(motorD.lastread);
-            sendStop();
+        else if (subPtr == &rightTurn){
+            rightMoveAction(rightTurn.lastread);
         }
     }
 }
@@ -99,4 +144,7 @@ void sendValue(uint8_t* data){
     uint8_t value = atoi((char*) data);
     Serial.write(value);
 
+}
+void sendRaw(uint8_t value){
+    Serial.write(value);
 }
