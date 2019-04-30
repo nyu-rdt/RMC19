@@ -74,7 +74,25 @@ while not rospy.is_shutdown():
                     pub.publish(msg)
                     msg.field = "b"
                     pub.publish(msg)
-                        
+                if target==NOT_MADE_YET:# linear actuator need to make sure it is up or down
+                    msg = PackedMessage() 
+                    msg.channel_name = "Deposition/Rack&Pinion"
+                    msg.value = received_data[2 * i + 5]
+                    msg.field = "a"
+                    rospy.loginfo("Sending Rack&Pinion value %d",msg.value)
+                    pub.publish(msg)
+                    msg.field = "b"
+                    pub.publish(msg)
+                if target==NOT_MADE_YET:# linear actuator need to make sure it is up or down
+                    msg = PackedMessage() 
+                    msg.channel_name = "Deposition/linearActuator"
+                    msg.value = (received_data[2 * i + 5] - 50) * 2
+                    msg.field = "a"
+                    rospy.loginfo("Sending linear actuator value %d",msg.value)
+                    pub.publish(msg)
+                    msg.field = "b"
+                    pub.publish(msg)
+			
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))    
             
 	"""
