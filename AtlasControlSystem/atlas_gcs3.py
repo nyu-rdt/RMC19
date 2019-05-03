@@ -94,7 +94,7 @@ local_port = 10010
 # 	target_ip = "127.0.0.1"
 # 	target_port = 10086
 
-# target_ip = "127.0.0.1"
+#target_ip = "127.0.0.1"
 # target_port = 10086
 target_ip = "192.168.1.101"
 target_port = 10010
@@ -159,8 +159,12 @@ pulse_sweep_mode = False
 pulse_counter = 0
 pulse_threshold = 15
 pulse_status = 0
-speed_list = {'backward':[228,228,26,26], 'left':[26,26,26,26], 
-		'straightforward':[26,26,228,228], 'right':[228,228,228,228], 'digging':[228,26,228,26], 
+
+#modify backward left straightforward right values to change wheel motor values
+#order of values is back left, back right, front left, front right
+#conversion is val(0 to 255) - 127
+speed_list = {'backward':[227,227,27,27], 'left':[27,27,27,27], 
+		'straightforward':[27,27,227,227], 'right':[227,227,227,227], 'digging':[228,26,228,26], 
 		'stop':[127,127,127,127], 'scissor_up':100, 'scissor_down':0, 'scissor_stop': 50, #HERE MODIFY THE SPEED OF UP AND DOWN--- 
 												#we need to convert the up and down on the bin - charles 
 												# 50 is the 0 zone. anything <50 will be positive power, >50 is negative 		
@@ -218,7 +222,7 @@ while done == False:
 			elif event.key == pygame.K_s:
 				mode = 'backward'
 				print "Backward pressed"
-				keyboard_speed_setting #CAN GO SPIN NOW WE NEED TO ADD SPEED?  ------------------ng_toggle = True
+				keyboard_speed_setting_toggle = True #CAN GO SPIN NOW WE NEED TO ADD SPEED?  ------------------ng_toggle = True
 			elif event.key == pygame.K_a:
 				mode = 'left'
 				print "Left pressed"
@@ -433,18 +437,20 @@ while done == False:
 			send_data.append({'name': 'W/R Motor2', 'value': mix_control(x_axis_remapped, y_axis_remapped, 2)})
 			send_data.append({'name': 'W/R Motor3', 'value': mix_control(x_axis_remapped, y_axis_remapped, 3)})
 			joystick_speed_setting_toggle = False
+                """
 		if keyboard_speed_setting_toggle:
 			send_data.append({'name': 'W/R Motor0', 'value': speed_list[mode][0]})
 			send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
 			send_data.append({'name': 'W/R Motor2', 'value': speed_list[mode][2]})
 			send_data.append({'name': 'W/R Motor3', 'value': speed_list[mode][3]})
 			keyboard_speed_setting_toggle = False
+                """
 		"""				
 		if digging_setting_toggle: #use to update the speed USE FOR SENDING DATA
                         if mode == 'stop': # we really should change this later
-                            send_data.append({'name': 'W/R Motor0', 'value': 0})
+                            send_data.append({'name': 'W/R Servo1', 'value': 0}) #changed to servo 1 so it doesn't mix up with the locomotion motors
 			else:
-                            send_data.append({'name': 'W/R Motor0', 'value': SPEED}) # digging speed is set to the current speed value. Command is the same as motor0 in json file
+                            send_data.append({'name': 'W/R Servo1', 'value': SPEED}) # digging speed is set to the current speed value. Command is the same as motor0 in json file
 			#send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
 			#send_data.append({'name': 'W/R Motor2', 'value': speed_list[mode][2]})
 			#send_data.append({'name': 'W/R Motor3', 'value': speed_list[mode][3]})
