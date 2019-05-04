@@ -5,11 +5,12 @@ import rospy
 from rdt_mqtt.msg import PackedMessage
 
 SERVER_ADDR = '0.0.0.0'
-# SERVER_PORT = 10010
 SERVER_PORT = 10010
 
-CLIENT_ADDR = '10.100.32.215'
-# CLIENT_ADDR = '127.0.0.1'
+#CLIENT_ADDR = '10.100.32.215'
+#CLIENT_ADDR = '127.0.0.1'
+CLIENT_ADDR = '192.168.1.102'
+#CLIENT_ADDR = '192.168.1.104'
 CLIENT_PORT = 10010
 #CLIENT_PORT = 1883
 
@@ -35,6 +36,18 @@ def byte_to_hex(byte):
     l=byte - (16 * h)
     return HEX[h] + HEX[l]
 
+#motorNames=["BackLeft","BackRight","FrontLeft","FrontRight"]
+""" Hopefully we can be more organized with the motor naming next semester
+        F
+2 FL+-------+FR 3
+    |       |
+L   | ROBOT |   R
+    |       |
+0 BL+-------+BR 1
+        B
+"""
+motorNames=["a","b","c","d"]
+
 init_socket()
 while not rospy.is_shutdown():
     pub = rospy.Publisher('bridge', PackedMessage, queue_size = 20)
@@ -56,43 +69,35 @@ while not rospy.is_shutdown():
         if hbSum != 160 and received_len > 3:
             for i in range(received_data[3] / 2):
                 target = received_data[2 * i + 4]
-                if target==1: #current command for digging
-                    msg = PackedMessage() 
+                msg = PackedMessage()
+                # convert recieved troy's values to marcus' values
+                # neg:126-0 neu:127 pos:128-255 -> neu:0 neg:127-1 pos:128-255
+                msg.value = received_data[2 * i + 5]
+                if msg.value == 127:
+                    msg.value = 0
+                elif msg.value < 127:
+                    msg.value += 1
+                if target==8:
                     msg.channel_name = "digging/motors"
-                    msg.value = received_data[2 * i + 5]
+                    rospy.loginfo("Recieved %d. Sending digging value %d",received_data[2 * i + 5],msg.value)
                     msg.field = "a"
-                    rospy.loginfo("Sending digging value %d",msg.value)
                     pub.publish(msg)
                     msg.field = "b"
                     pub.publish(msg)
                 if target==7:# linear actuator need to make sure it is up or down
-                    msg = PackedMessage() 
                     msg.channel_name = "digging/linearActuator"
-                    msg.value = (received_data[2 * i + 5] - 50) * 2
+                    rospy.loginfo("Recieved %d. Sending linear actuator value %d",received_data[2 * i + 5],msg.value)
                     msg.field = "a"
-                    rospy.loginfo("Sending linear actuator value %d",msg.value)
                     pub.publish(msg)
                     msg.field = "b"
                     pub.publish(msg)
-                if target==NOT_MADE_YET:# linear actuator need to make sure it is up or down
-                    msg = PackedMessage() 
-                    msg.channel_name = "Deposition/Rack&Pinion"
-                    msg.value = received_data[2 * i + 5]
-                    msg.field = "a"
-                    rospy.loginfo("Sending Rack&Pinion value %d",msg.value)
+                if 1<=target<=4:#locomotion motors
+                    msg.channel_name = "loco/motors"
+                    msg.field = motorNames[target-1]
+                    rospy.loginfo("Recieved %d. Sending motor %s value %d",received_data[2 * i + 5],motorNames[target-1],msg.value)
                     pub.publish(msg)
-                    msg.field = "b"
-                    pub.publish(msg)
-                if target==NOT_MADE_YET:# linear actuator need to make sure it is up or down
-                    msg = PackedMessage() 
-                    msg.channel_name = "Deposition/linearActuator"
-                    msg.value = (received_data[2 * i + 5] - 50) * 2
-                    msg.field = "a"
-                    rospy.loginfo("Sending linear actuator value %d",msg.value)
-                    pub.publish(msg)
-                    msg.field = "b"
-                    pub.publish(msg)
-			
+
+                        
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))    
             
 	"""
