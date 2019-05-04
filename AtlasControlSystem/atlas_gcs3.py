@@ -165,9 +165,9 @@ pulse_status = 0
 #conversion is val(0 to 255) - 127
 speed_list = {'backward':[227,227,27,27], 'left':[27,27,27,27], 
 		'straightforward':[27,27,227,227], 'right':[227,227,227,227], 'digging':[228,26,228,26], 
-		'stop':[127,127,127,127], 'scissor_up':100, 'scissor_down':0, 'scissor_stop': 50, #HERE MODIFY THE SPEED OF UP AND DOWN--- 
+		'stop':[127,127,127,127], 'scissor_up':255, 'scissor_down':0, 'scissor_stop': 127, #HERE MODIFY THE SPEED OF UP AND DOWN--- 
 												#we need to convert the up and down on the bin - charles 
-												# 50 is the 0 zone. anything <50 will be positive power, >50 is negative 		
+												# 127 is the 0 zone. anything <127 will be positive power, >127 is negative 		
 		'belt_fwd': 255, 'belt_bwd': 0, 'belt_stop': 127, 'sweep_start': 255, 'sweep_stop': 127,
 		'back_digging':[228, 127, 127, 26], 'front_digging':[127, 26, 228, 127]}
 belt_list = {'belt_fwd': 1, 'belt_stop': 0}
@@ -192,7 +192,7 @@ y_axis_remapped = 0
 x_axis_home = False
 y_axis_home = False
 #ADD SPEED THAT IS INDICATED BY NUM PAD NOT PRIORITY FOR NOW -------
-SPEED = 50
+SPEED = 159
 
 # Main loop
 while done == False:
@@ -248,24 +248,24 @@ while done == False:
 			#	sweep_mode = 'sweep_start'
 			#	print "Sweep pressed"
 			#	sweep_setting_toggle = True
-			#elif event.key == pygame.K_0:
-			#	SPEED=0
-			#	print "Speed set to ",SPEED
-			#	digging_setting_toggle = True
+			elif event.key == pygame.K_0:
+				SPEED=95
+				print "Speed set to ",SPEED
+				digging_setting_toggle = True
 			elif event.key == pygame.K_1:
-				SPEED=25
+				SPEED=159
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_2:
-				SPEED=50
+				SPEED=191
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_3:
-				SPEED=75
+				SPEED=223
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_4:
-				SPEED=100
+				SPEED=255
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 								#ADD OUR OUR SPEED FOR UP AND DOWN
@@ -448,7 +448,7 @@ while done == False:
 		"""				
 		if digging_setting_toggle: #use to update the speed USE FOR SENDING DATA
                         if mode == 'stop': # we really should change this later
-                            send_data.append({'name': 'W/R Servo1', 'value': 0}) #changed to servo 1 so it doesn't mix up with the locomotion motors
+                            send_data.append({'name': 'W/R Servo1', 'value': 127}) #changed to servo 1 so it doesn't mix up with the locomotion motors
 			else:
                             send_data.append({'name': 'W/R Servo1', 'value': SPEED}) # digging speed is set to the current speed value. Command is the same as motor0 in json file
 			#send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
