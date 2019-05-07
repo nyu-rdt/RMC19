@@ -258,5 +258,70 @@
     "wmax": 255, 
     "returnable": "required", 
     "wmin": 0
+  },
+  "Door Open": {
+    "rmin": 0, 
+    "writedata": 0, 
+    "name": "Door Open", 
+    "rmax": 65536, 
+    "cmd": 20, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 120, 
+    "returnable": "required", 
+    "wmin": 120
+  },
+  "Door Close": {
+    "rmin": 0, 
+    "writedata": 0, 
+    "name": "Door Close", 
+    "rmax": 65536, 
+    "cmd": 21, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 120, 
+    "returnable": "required", 
+    "wmin": 120
+  },
+  "Linear Actuators Up": {
+    "rmin": 0,
+    "writedata": 0, 
+    "name": "Linear Actuators Up", 
+    "rmax": 65536, 
+    "cmd": 22, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 250, 
+    "returnable": "required", 
+    "wmin": 190
+  },
+  "Linear Actuators Down": {
+    "rmin": 0, 
+    "writedata": 0, 
+    "name": "Linear Actuators Down", 
+    "rmax": 65536, 
+    "cmd": 23, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 170, 
+    "returnable": "required", 
+    "wmin": 60
+  },
+  "Linear Actuators Stop": {
+    "rmin": 0, 
+    "writedata": 0, 
+    "name": "Linear Actuators Stop", 
+    "rmax": 65536, 
+    "cmd": 24, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 0, 
+    "returnable": "required", 
+    "wmin": 0
   }
 }
