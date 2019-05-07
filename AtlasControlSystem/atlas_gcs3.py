@@ -29,44 +29,6 @@ def putincommand(data):
 		command_buffer.put(data)
 		command_buffer_lock.release()
 
-def linear_remap_signed(dead_zone, input_data):
-	if input_data > -dead_zone and input_data < dead_zone:
-		return 127
-	if input_data > 0:
-		return (input_data - dead_zone) * 127 / (1000 - dead_zone) + 127
-	if input_data < 0:
-		return 127 - (-input_data - dead_zone) * 127 / (1000 - dead_zone)
-
-def linear_remap(input_data):
-	if input_data >= 0:
-		return (input_data / 1000.0) * 126 + 127
-	if input_data < 0:
-		return 127 + (input_data / 1000.0) * 126
-
-def dead_zone_remove(dead_zone, input_data):
-	if input_data > -dead_zone and input_data < dead_zone:
-		return 0
-	if input_data > 0:
-		return ((input_data - dead_zone) / (1000.0 - dead_zone)) * 1000
-	if input_data < 0:
-		return (-(-input_data - dead_zone) / (1000.0 - dead_zone)) * 1000
-
-def restrict_range(n):
-	if n >= 1000:
-		return 1000
-	elif n <= -1000:
-		return -1000
-	else:
-		return n
-
-def mix_control(x_axis, y_axis, wheel):
-	x_processed = dead_zone_remove(dead_zone_joystick, x_axis)
-	y_processed = dead_zone_remove(dead_zone_joystick, y_axis)
-	if wheel == 0 or wheel == 1:
-		return int(linear_remap(restrict_range(x_processed + y_processed) * motor_reverse_bit[wheel]))
-	if wheel == 2 or wheel == 3:
-		return int(linear_remap(-restrict_range(x_processed - y_processed) * motor_reverse_bit[wheel]))
-
 # while True:
 # 	if not ui_buffer.empty():
 # 		dic = ui_buffer.get()
@@ -96,7 +58,7 @@ local_port = 10010
 
 #target_ip = "127.0.0.1"
 # target_port = 10086
-target_ip = "192.168.1.101"
+target_ip = "192.168.1.102"
 target_port = 10010
 #target_ip = "127.0.0.1"
 #target_port = 10086
@@ -140,25 +102,17 @@ if platform.system() == 'Darwin':
 	is_os = True
 
 # Variable Initialization
-BLACK = (   0,   0,   0)
-WHITE = ( 255, 255, 255)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 done = False
 mode = ''
 belt_mode = ''
-scissor_mode = ''
+lin_act_mode = ''
 sweep_mode = 'sweep_stop'
 keyboard_speed_setting_toggle = False
-joystick_speed_setting_toggle = False
 digging_setting_toggle = False
-sweep_setting_toggle = False
-belt_setting_toggle = False
-scissor_setting_toggle = False
-toggle_scissor_mode = False
-toggle_sweep_mode = False
-pulse_sweep_mode = False
-pulse_counter = 0
-pulse_threshold = 15
-pulse_status = 0
+door_setting_toggle = False
+lin_act_setting_toggle = False
 
 #modify backward left straightforward right values to change wheel motor values
 #order of values is back left, back right, front left, front right
@@ -170,32 +124,13 @@ speed_list = {'backward':[227,227,27,27], 'left':[27,27,27,27],
 												# 127 is the 0 zone. anything <127 will be positive power, >127 is negative 		
 		'belt_fwd': 255, 'belt_bwd': 0, 'belt_stop': 127, 'sweep_start': 255, 'sweep_stop': 127,
 		'back_digging':[228, 127, 127, 26], 'front_digging':[127, 26, 228, 127]}
-belt_list = {'belt_fwd': 1, 'belt_stop': 0}
-motor_reverse_bit = [1, 1, -1, -1]
-switches = 0;
-dead_zone_joystick = 150
-axis_change_th = 20
-x_axis_pre = 0
-y_axis_pre = 0
-belt_button_pre = 0
-scissor_button_pre = 0
-dig_button_pre = 0
-sweep_button_pre = 0
-back_dig_button_pre = 0
-front_dig_button_pre = 0
-pulse_status_pre = 0
-dig_mode = False
-x_axis_raw = 0
-y_axis_raw = 0
-x_axis_remapped = 0
-y_axis_remapped = 0
-x_axis_home = False
-y_axis_home = False
-#ADD SPEED THAT IS INDICATED BY NUM PAD NOT PRIORITY FOR NOW -------
-SPEED = 159
+
+SPEED = 500
 
 # Main loop
 while done == False:
+
+	# Draw action detector
 	screen.fill(BLACK)
 	if not ui_buffer.empty():
 		ui_data = ui_buffer.get()
@@ -227,217 +162,86 @@ while done == False:
 				mode = 'left'
 				print "Left pressed"
 				keyboard_speed_setting_toggle = True
-			elif event.key == pygame.K_q:   #MODIFY THIS SO IT CAN GO SPIN NOW WE NEED TO ADD SPEED?  ------------------------ need to add how much percvent to give?
+
+			# Drum spin at last set speed command (default: 50)
+			elif event.key == pygame.K_q:   
 				mode = 'digging'
 				sweep_mode = 'sweep_start'
 				print "Digging pressed"
 				digging_setting_toggle = True
-			elif event.key == pygame.K_i:
-				scissor_mode = 'scissor_up' #this is probably the up ------- HOW FAST IS IT GOING NEEDED TO BE ADDED
-				print "Scissor lift up pressed"
-				scissor_setting_toggle = True
-			elif event.key == pygame.K_l:
-				belt_mode = 'belt_fwd'
-				print "Belt forward pressed"
-				belt_setting_toggle = True
+
+			# Linear actuators down command
 			elif event.key == pygame.K_k:
-				scissor_mode = 'scissor_down' #THIS IS DOING DOWN THE LEVEL
-				print "Scissor lift down pressed"
-				scissor_setting_toggle = True
-			#elif event.key == pygame.K_j:
-			#	sweep_mode = 'sweep_start'
-			#	print "Sweep pressed"
-			#	sweep_setting_toggle = True
+				lin_act_mode = 'lin_acts_down' 
+				print "Linear actuators down pressed"
+				lin_act_setting_toggle = True
+
+			# Linear actuators up command
+			elif event.key == pygame.K_i:
+				lin_act_mode = 'lin_acts_up'
+				print "Linear actuators up pressed"
+				lin_act_setting_toggle = True
+
+			# Door open command
+			elif event.key == pygame.K_o:
+				belt_mode = 'door_open'
+				print "Belt forward pressed"
+				door_setting_toggle = True
+
+			# Door close command
+			elif event.key == pygame.K_l:
+				belt_mode = 'door_close'
+				print "Belt forward pressed"
+				door_setting_toggle = True
+
+			# Drum speed adjustments; 0 is off, 1-4 is range of values lowest to highest
 			elif event.key == pygame.K_0:
-				SPEED=95
+				SPEED=127
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_1:
-				SPEED=159
+				SPEED=200
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_2:
-				SPEED=191
+				SPEED=210
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_3:
-				SPEED=223
+				SPEED=230
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_4:
-				SPEED=255
+				SPEED=500
 				print "Speed set to ",SPEED
 				digging_setting_toggle = True
-								#ADD OUR OUR SPEED FOR UP AND DOWN
 
+		# Defining key released events for each key
 		if event.type == pygame.KEYUP: 
 			if event.key == pygame.K_w or event.key == pygame.K_a or event.key == pygame.K_s or event.key == pygame.K_d:
 				mode = 'stop'
 				print "Key released"
 				keyboard_speed_setting_toggle = True
 			elif event.key == pygame.K_q: #STOP DIGGING HERE -----------------
-				mode = 'stop'
+				mode = 'drum_stop'
 				print "Key released"
 				digging_setting_toggle = True
+			elif event.key == pygame.K_o:
+				belt_mode = 'door_open'
+				door_setting_toggle = True
 			elif event.key == pygame.K_l:
-				belt_mode = 'belt_stop'
-				belt_setting_toggle = True
+				belt_mode = 'door_close'
+				door_setting_toggle = True
 			elif event.key == pygame.K_i or event.key == pygame.K_k:
-				scissor_mode = 'scissor_stop'  
-				scissor_setting_toggle = True
-			#elif event.key == pygame.K_j:
-			#	sweep_mode = 'sweep_stop'
-			#q	sweep_setting_toggle = True
-		# Get joystick number
-		joystick_count = pygame.joystick.get_count()
-		# print joystick_count
-		if joystick_count:
-			joystick = pygame.joystick.Joystick(0)
-			joystick.init()
-			x_axis_raw = 1000 * joystick.get_axis(0)
-			y_axis_raw = 1000 * joystick.get_axis(1)
-			if is_os:
-				dig_button = joystick.get_button(11)
-				back_dig_button = joystick.get_button(12)
-				belt_button = joystick.get_button(14)
-				sweep_button = joystick.get_button(13)
-				pulse_mode_button = joystick.get_button(5)
-				toggle_mode_button = joystick.get_button(4)
-				opt_scissor_button = (joystick.get_button(0), joystick.get_button(1))
-				if opt_scissor_button == (0,0) or opt_scissor_button == (1,1):
-					scissor_button = 0
-				elif opt_scissor_button == (1,0):
-					scissor_button = 1
-				elif opt_scissor_button == (0,1):
-					scissor_button = -1
-			else:
-				dig_button = joystick.get_button(0)
-				_, scissor_button = joystick.get_hat(0)
-				belt_button = joystick.get_button(1)
-				sweep_button = joystick.get_button(4)
-				back_dig_button = joystick.get_button(2)
-				front_dig_button = joystick.get_button(3)
-				pulse_mode_button = joystick.get_button(6)
-				toggle_mode_button = joystick.get_button(7)
-			# print x_axis_raw, " ", y_axis_raw
-			if (dig_button == 0 and dig_button_pre == 0) and (back_dig_button == 0 and back_dig_button_pre == 0) and (front_dig_button == 0 and front_dig_button_pre == 0):
-				if int(linear_remap_signed(dead_zone_joystick, x_axis_raw)) == 127 and not x_axis_home:
-					joystick_speed_setting_toggle = True
-					keyboard_speed_setting_toggle = False
-					x_axis_home = True
-					x_axis_remapped = 0
-				elif abs(x_axis_raw - x_axis_pre) > axis_change_th and int(linear_remap_signed(dead_zone_joystick, x_axis_raw)) != 127:
-					joystick_speed_setting_toggle = True
-					keyboard_speed_setting_toggle = False
-					x_axis_home = False
-					x_axis_remapped = x_axis_raw
-					# x_axis_remapped = int(linear_remap_signed(dead_zone_joystick, x_axis_raw))
-				if int(linear_remap_signed(dead_zone_joystick, y_axis_raw)) == 127 and not y_axis_home:
-					joystick_speed_setting_toggle = True
-					keyboard_speed_setting_toggle = False
-					y_axis_home = True
-					y_axis_remapped = 0
-				elif abs(y_axis_raw - y_axis_pre) > axis_change_th and int(linear_remap_signed(dead_zone_joystick, y_axis_raw)) != 127:
-					joystick_speed_setting_toggle = True
-					keyboard_speed_setting_toggle = False
-					y_axis_home = False
-					y_axis_remapped = y_axis_raw
-					# y_axis_remapped = int(linear_remap_signed(dead_zone_joystick, y_axis_raw))
-			elif dig_button == 1 and dig_button_pre == 0:
-				mode = 'digging'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			elif dig_button == 0 and dig_button_pre == 1:
-				mode = 'stop'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			elif back_dig_button == 1 and back_dig_button_pre == 0:
-				mode = 'back_digging'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			elif back_dig_button == 0 and back_dig_button_pre == 1:
-				mode = 'stop'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			elif front_dig_button == 1 and front_dig_button_pre == 0:
-				mode = 'front_digging'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			elif front_dig_button == 0 and front_dig_button_pre == 1:
-				mode = 'stop'
-				joystick_speed_setting_toggle = False
-				keyboard_speed_setting_toggle = False
-				digging_setting_toggle = True
-			if sweep_button_pre != sweep_button:
-				if toggle_mode_button == 1:
-					toggle_sweep_mode = True
-				else:
-					toggle_sweep_mode = False
-				if pulse_mode_button == 1:
-					pulse_sweep_mode = True
-				else:
-					pulse_sweep_mode = False
-				if sweep_button == 1:
-					sweep_mode = 'sweep_start'
-				elif sweep_button == 0 and toggle_sweep_mode == False and pulse_sweep_mode == False:
-					sweep_mode = 'sweep_stop'
-				sweep_setting_toggle = True
-			if belt_button != belt_button_pre:
-				# if belt_button == 1:
-				# 	belt_mode = 'belt_fwd'
-				# elif belt_button == -1:
-				# 	belt_mode = 'belt_bwd'
-				# elif belt_button == 0:
-				# 	belt_mode = 'belt_stop'
-				if belt_button == 1:
-					belt_mode = 'belt_fwd'
-				elif belt_button == 0:
-					belt_mode = 'belt_stop'			
-				belt_setting_toggle = True
-			if scissor_button_pre != scissor_button:
-				if toggle_mode_button == 1:
-					toggle_scissor_mode = True
-				else:
-					toggle_scissor_mode = False
-				if scissor_button == 1:
-					scissor_mode = 'scissor_up'
-				elif scissor_button == -1:
-					scissor_mode = 'scissor_down'
-				elif scissor_button == 0 and toggle_scissor_mode == False:
-					scissor_mode = 'scissor_stop'
-				scissor_setting_toggle = True
-			sweep_button_pre = sweep_button
-			scissor_button_pre = scissor_button
-			belt_button_pre = belt_button
-			dig_button_pre = dig_button
-			front_dig_button_pre = front_dig_button
-			back_dig_button_pre = back_dig_button
-			x_axis_pre = x_axis_raw
-			y_axis_pre = y_axis_raw
-	if pulse_status_pre != pulse_status:
-		if pulse_sweep_mode:
-			if pulse_status == 1:
-				sweep_mode = 'sweep_start'
-			else:
-				sweep_mode = 'sweep_stop'
-			sweep_setting_toggle = True
-	pulse_status_pre = pulse_status
-	if joystick_speed_setting_toggle or keyboard_speed_setting_toggle \
-		or digging_setting_toggle or belt_setting_toggle or scissor_setting_toggle or sweep_setting_toggle:
+				lin_act_mode = 'lin_acts_stop'  
+				print "Linear actuators stopped"
+				lin_act_setting_toggle = True
+		
+	
+	if keyboard_speed_setting_toggle \
+		or digging_setting_toggle or door_setting_toggle or lin_act_setting_toggle:
 		send_data = []
-                """
-		if joystick_speed_setting_toggle:
-			send_data.append({'name': 'W/R Motor0', 'value': mix_control(x_axis_remapped, y_axis_remapped, 0)})
-			send_data.append({'name': 'W/R Motor1', 'value': mix_control(x_axis_remapped, y_axis_remapped, 1)})
-			send_data.append({'name': 'W/R Motor2', 'value': mix_control(x_axis_remapped, y_axis_remapped, 2)})
-			send_data.append({'name': 'W/R Motor3', 'value': mix_control(x_axis_remapped, y_axis_remapped, 3)})
-			joystick_speed_setting_toggle = False
-                """
+
 		if keyboard_speed_setting_toggle:
 			send_data.append({'name': 'W/R Motor0', 'value': speed_list[mode][0]})
 			send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
@@ -446,40 +250,32 @@ while done == False:
 			keyboard_speed_setting_toggle = False
                 """
 		"""				
-		if digging_setting_toggle: #use to update the speed USE FOR SENDING DATA
-                        if mode == 'stop': # we really should change this later
-                            send_data.append({'name': 'W/R Servo1', 'value': 127}) #changed to servo 1 so it doesn't mix up with the locomotion motors
+		if digging_setting_toggle:
+			if mode == 'drum_stop':
+				send_data.append({'name': 'W/R Servo1', 'value': 127}) #changed to servo 1 so it doesn't mix up with the locomotion motors
 			else:
-                            send_data.append({'name': 'W/R Servo1', 'value': SPEED}) # digging speed is set to the current speed value. Command is the same as motor0 in json file
-			#send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
-			#send_data.append({'name': 'W/R Motor2', 'value': speed_list[mode][2]})
-			#send_data.append({'name': 'W/R Motor3', 'value': speed_list[mode][3]})
+				send_data.append({'name': 'W/R Servo1', 'value': SPEED}) 
 			digging_setting_toggle = False
-		if scissor_setting_toggle:
-			send_data.append({'name': 'W/R Servo0', 'value': speed_list[scissor_mode]})
-			scissor_setting_toggle=False		
-		"""		
-		if belt_setting_toggle:
-			# send_data.append({'name': 'W/R Servo1', 'value': speed_list[belt_mode]})
-			send_data.append({'name': 'W/R Single Switch', 'value': belt_list[belt_mode]})
-			belt_setting_toggle = False
-		if scissor_setting_toggle:
-			send_data.append({'name': 'W/R Servo0', 'value': speed_list[scissor_mode]})
-			scissor_setting_toggle = False
-		if sweep_setting_toggle:
-			send_data.append({'name': 'W/R Servo1', 'value': speed_list[sweep_mode]})
-			sweep_setting_toggle = False
-		"""
+
+		if lin_act_setting_toggle:
+			if lin_act_mode == 'lin_acts_stop':
+				send_data.append({'name': 'Linear Actuators Stop', 'value': 0})
+			elif lin_act_mode == 'lin_acts_up':
+				send_data.append({'name': 'Linear Actuators Up', 'value': 220})
+			elif lin_act_mode == 'lin_acts_down':
+				send_data.append({'name': 'Linear Actuators Down', 'value': 110})
+			lin_act_setting_toggle=False	
+
+		if door_setting_toggle:
+			if belt_mode == 'door_open':
+				send_data.append({'name': 'Door Open', 'value': 120})
+			elif belt_mode == 'door_close':
+				send_data.append({'name': 'Door Close', 'value': 250})
+		
 		keyboard_speed_setting_toggle = False
-		belt_setting_toggle = False
-		sweep_setting_toggle = False
+		door_setting_toggle = False
 		putincommand(send_data)
 	connection_status.draw()
 	pygame.display.flip()
-	pulse_counter += 1
-	if pulse_counter > pulse_threshold:
-		pulse_counter = 0
-		pulse_status = 1 - pulse_status
-		# print "pulse_status", pulse_status
 	clock.tick(60)
 pygame.quit()
