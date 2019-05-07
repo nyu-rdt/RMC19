@@ -9,7 +9,7 @@ SERVER_PORT = 10010
 
 #CLIENT_ADDR = '10.100.32.215'
 #CLIENT_ADDR = '127.0.0.1'
-CLIENT_ADDR = '192.168.1.102'
+CLIENT_ADDR = '192.168.1.104'
 #CLIENT_ADDR = '192.168.1.104'
 CLIENT_PORT = 10010
 #CLIENT_PORT = 1883
@@ -77,19 +77,43 @@ while not rospy.is_shutdown():
                     msg.value = 0
                 elif msg.value < 127:
                     msg.value += 1
+                if target==21:
+                    msg.channel_name = "digging/linearActuator"
+                    msg.field = "b"
+                    msg.value = 250
+                    pub.publish(msg)
+                if target==20:
+                    msg.channel_name = "digging/linearActuator"
+                    msg.field = "b"
+                    msg.value = 120
+                    pub.publish(msg)
                 if target==8:
+                    rospy.loginfo("Target:  " + str(target))
                     msg.channel_name = "digging/motors"
                     rospy.loginfo("Recieved %d. Sending digging value %d",received_data[2 * i + 5],msg.value)
-                    msg.field = "a"
-                    pub.publish(msg)
-                    msg.field = "b"
+                    msg.field = "all"
                     pub.publish(msg)
                 if target==7:# linear actuator need to make sure it is up or down
                     msg.channel_name = "digging/linearActuator"
                     rospy.loginfo("Recieved %d. Sending linear actuator value %d",received_data[2 * i + 5],msg.value)
                     msg.field = "a"
                     pub.publish(msg)
-                    msg.field = "b"
+                    #msg.field = "b"
+                    #pub.publish(msg)
+                if target==22:
+                    msg.channel_name = "digging/linearActuator"
+                    msg.field = "a"
+                    msg.value = 220
+                    pub.publish(msg)
+                if target==23:
+                    msg.channel_name = "digging/linearActuator"
+                    msg.field = "a"
+                    msg.value = 110
+                    pub.publish(msg)
+                if target==24:
+                    msg.channel_name = "digging/linearActuator"
+                    msg.field = "a"
+                    msg.value = 0
                     pub.publish(msg)
                 if 1<=target<=4:#locomotion motors
                     msg.channel_name = "loco/motors"
@@ -98,33 +122,6 @@ while not rospy.is_shutdown():
                     pub.publish(msg)
 
                         
-        conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))    
-            
-	"""
-        dataHex=""
-        sum=0
-        for i in range(received_len):
-            data += str(received_data[i])
-            data += " "
-            dataHex += byte_to_hex(received_data[i])
-            sum += received_data[i]
-            
-        #converts data recieved to a hex string to be converted on the reciever
-        #msg.value = dataHex# + data
-        #rospy.loginfo(data)
-        #pub.publish(msg)
-        
-        if sum != 160:
-            msg.value = dataHex# + data
-            rospy.loginfo(data)
-            pub.publish(msg) 
-	
         conn.sendto(pack_data([0x4E,0x52,0x00]), (CLIENT_ADDR, CLIENT_PORT))
-        
-        if sum != 160:
-            rospy.loginfo('Sent ACK')
-            rospy.loginfo("-------------")"""
-
-    time.sleep(0.01)
-
+        time.sleep(0.01)
 conn.close()
