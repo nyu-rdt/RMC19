@@ -122,7 +122,7 @@ struct PriorityThread sensor = {
   NULL
 };
 
-struct PriorityThread threads[2] = { controller, sensor };
+struct PriorityThread *threads[2] = { &controller, &sensor };
 
 void setup() {
   // Begin listening on serial ports
@@ -154,7 +154,7 @@ void loop() {
   // All the main loop does is update the sensors
   int clockCounter = millis();
   for (int i = 0; i < 2; ++i) {
-    if ((threads[i].threadStatus == T_STATUS_WAITING) || (threads[i].resource() > 0)) {
+    if ((threads[i]->threadStatus == T_STATUS_WAITING) || (threads[i]->resource() > 0)) {
       runThread(threads[i]);
     }
   }
@@ -252,7 +252,8 @@ void writeMotor(int motorNum, int power) {
   }
   else {
     // Write to the serial port
-    unsigned int signalPWM = (unsigned long)power * 205 / 255 + 204; // Equation to map from 0-255 ---> 204-409 (12-bit resolution)
+    int signalPWM = power;
+//    unsigned int signalPWM = (unsigned long)power * 205 / 255 + 204; // Equation to map from 0-255 ---> 204-409 (12-bit resolution)
     analogWrite(*(int *)motor, signalPWM);
   }
 }

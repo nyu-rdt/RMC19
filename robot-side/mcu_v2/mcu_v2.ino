@@ -66,9 +66,9 @@ int MiscSensor = A14;
 int DebugLED = 13;
 
 // Serial definitions
-HardwareSerial ESP = Serial1; // ESP WiFi Module
-HardwareSerial GoldMotor = Serial2;
-HardwareSerial BlueMotor = Serial3;
+HardwareSerial *ESP = &Serial1; // ESP WiFi Module
+HardwareSerial *GoldMotor = &Serial2;
+HardwareSerial *BlueMotor = &Serial3;
 #define ESP_BAUDRATE        115200
 #define ROBOTEQ_BAUDRATE    115200
 
@@ -79,17 +79,17 @@ HardwareSerial BlueMotor = Serial3;
 
 // Buffers
 // pinMappings holds the mapings between the comm code and the pin
-void *pinMappings[ARGUMENT_LENGTH];
+void *pinMappings[0xFF];
 // motorBuffer holds the current status of each motor
-int motorBuffer[ARGUMENT_LENGTH];
+int motorBuffer[0xFF];
 // sensorBuffer holds the current status of each sensor
-int sensorBuffer[ARGUMENT_LENGTH];
+int sensorBuffer[0xFF];
 
 void setup() {
   // Begin listening on serial ports
-  ESP.begin(ESP_BAUDRATE);
-  BlueMotor.begin(ROBOTEQ_BAUDRATE);
-  GoldMotor.begin(ROBOTEQ_BAUDRATE);
+  ESP->begin(ESP_BAUDRATE);
+  BlueMotor->begin(ROBOTEQ_BAUDRATE);
+  GoldMotor->begin(ROBOTEQ_BAUDRATE);
 
   // Pin modes
   pinMode(Pullup1, INPUT);
@@ -109,6 +109,10 @@ void setup() {
   memset(pinMappings, 0, ARGUMENT_LENGTH);
   // Map pins, replace argument with USE_PWM to control motors with PWM
   mapPins(USE_SERIAL);
+//  mapPins(USE_PWM);
+
+  // Wait for motor controllers to turn on...
+  delay(5000);
 }
 
 void loop() {
@@ -131,10 +135,11 @@ void commandRoutine () {
   int incompleteSegmentStart = 0;
 
   // Keep reading until you read the STOP BYTE (don't leave a command hanging)
-  while (nextByteType != START_TYPE) {
+  do
+  {
     // For each byte in the read buffer
-    while (ESP.available() > 0) {
-      int currentByte = ESP.read();
+    while (ESP->available() > 0) {
+      int currentByte = ESP->read();
       
       if (nextByteType == START_TYPE && currentByte == WRITE_OUTPUT) {
         nextByteType = MOTOR_TYPE;
@@ -169,7 +174,7 @@ void commandRoutine () {
         nextByteType = START_TYPE;
       }
     }
-  }
+  } while (nextByteType != START_TYPE);
 }
 
 // This function commits changes to the robot state
@@ -187,15 +192,16 @@ void commit(int motor, int sensor, int value) {
 // Write a value to a motor
 void writeMotor(int motorNum, int power) {
   void *motor = pinMappings[motorNum];
-  if ((HardwareSerial *)motor == &BlueMotor || (HardwareSerial *)motor == &GoldMotor) {
+  if (((HardwareSerial *)motor == BlueMotor) || ((HardwareSerial *)motor == GoldMotor)) {
     int signalSerial = (power != 0) * ((power - 128) * 3937);
     String chan = String((((motorNum == BLUE_MOTOR_CHAN_2) || (motorNum == GOLD_MOTOR_CHAN_2)) + 1));
     String power = String(signalSerial);
-    (*(HardwareSerial *)motor).println("!G " + chan + " " + power + "\r");
+    ((HardwareSerial *)motor)->println("!G " + chan + " " + power + "\r");
   }
   else {
     // Write to the serial port
-    unsigned int signalPWM = (unsigned long)power * 205 / 255 + 204; // Equation to map from 0-255 ---> 204-409 (12-bit resolution)
+    int signalPWM = power;
+//    unsigned int signalPWM = (unsigned long)power * 205 / 255 + 204; // Equation to map from 0-255 ---> 204-409 (12-bit resolution)
     analogWrite(*(int *)motor, signalPWM);
   }
 }
@@ -219,10 +225,10 @@ void panic() {
 // This function maps the communication codes to the pins
 void mapPins(int isSerial) {
   if (isSerial == USE_SERIAL) {
-    pinMappings[BLUE_MOTOR_CHAN_1] = (void *)&BlueMotor;
-    pinMappings[BLUE_MOTOR_CHAN_2] = (void *)&BlueMotor;
-    pinMappings[GOLD_MOTOR_CHAN_1] = (void *)&GoldMotor;
-    pinMappings[GOLD_MOTOR_CHAN_2] = (void *)&GoldMotor;
+    pinMappings[BLUE_MOTOR_CHAN_1] = (void *)BlueMotor;
+    pinMappings[BLUE_MOTOR_CHAN_2] = (void *)BlueMotor ;
+    pinMappings[GOLD_MOTOR_CHAN_1] = (void *)GoldMotor;
+    pinMappings[GOLD_MOTOR_CHAN_2] = (void *)GoldMotor;
   }
   else {
     // Multiple channels are not supported using PWM
