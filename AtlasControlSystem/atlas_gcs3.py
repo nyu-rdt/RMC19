@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 
 import socket, json, os, time
 import threading, Queue
@@ -102,30 +102,29 @@ if platform.system() == 'Darwin':
 	is_os = True
 
 # Variable Initialization
+EXIT_GCS_WITH_BKSP = True # Disable if you do not want to exit gcs with backspace key
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 done = False
-mode = ''
-belt_mode = ''
+
+move_mode = ''
+drum_mode = ''
+door_mode = ''
 lin_act_mode = ''
-sweep_mode = 'sweep_stop'
-keyboard_speed_setting_toggle = False
+depo_mode = ''
+depo_lin_act_mode = ''
+
+move_setting_toggle = False
 digging_setting_toggle = False
 door_setting_toggle = False
 lin_act_setting_toggle = False
+depo_setting_toggle = False
+depo_lin_act_setting_toggle = False
 
-#modify backward left straightforward right values to change wheel motor values
-#order of values is back left, back right, front left, front right
-#conversion is val(0 to 255) - 127
-speed_list = {'backward':[227,227,27,27], 'left':[27,27,27,27], 
-		'straightforward':[27,27,227,227], 'right':[227,227,227,227], 'digging':[228,26,228,26], 
-		'stop':[127,127,127,127], 'scissor_up':255, 'scissor_down':0, 'scissor_stop': 127, #HERE MODIFY THE SPEED OF UP AND DOWN--- 
-												#we need to convert the up and down on the bin - charles 
-												# 127 is the 0 zone. anything <127 will be positive power, >127 is negative 		
-		'belt_fwd': 255, 'belt_bwd': 0, 'belt_stop': 127, 'sweep_start': 255, 'sweep_stop': 127,
-		'back_digging':[228, 127, 127, 26], 'front_digging':[127, 26, 228, 127]}
-
-SPEED = 500
+MOVEMENT_SPEED = 100
+DRUM_SPEED = 500
+LIN_ACT_SPEED = 0
 
 # Main loop
 while done == False:
@@ -147,26 +146,25 @@ while done == False:
 		# Get keyboard input
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_w:
-				mode = 'straightforward'
-				keyboard_speed_setting_toggle = True
+				move_mode = 'forward'
+				move_setting_toggle = True
 				print "Forward pressed"
 			elif event.key == pygame.K_d:
-				mode = 'right'
+				move_mode = 'right'
 				print "Right pressed"
-				keyboard_speed_setting_toggle = True
+				move_setting_toggle = True
 			elif event.key == pygame.K_s:
-				mode = 'backward'
+				move_mode = 'backward'
 				print "Backward pressed"
-				keyboard_speed_setting_toggle = True #CAN GO SPIN NOW WE NEED TO ADD SPEED?  ------------------ng_toggle = True
+				move_setting_toggle = True
 			elif event.key == pygame.K_a:
-				mode = 'left'
+				move_mode = 'left'
 				print "Left pressed"
-				keyboard_speed_setting_toggle = True
+				move_setting_toggle = True
 
 			# Drum spin at last set speed command (default: 50)
 			elif event.key == pygame.K_q:   
-				mode = 'digging'
-				sweep_mode = 'sweep_start'
+				drum_mode = 'drum_start'
 				print "Digging pressed"
 				digging_setting_toggle = True
 
@@ -184,77 +182,140 @@ while done == False:
 
 			# Door open command
 			elif event.key == pygame.K_o:
-				belt_mode = 'door_open'
+				door_mode = 'door_open'
 				print "Belt forward pressed"
 				door_setting_toggle = True
 
 			# Door close command
 			elif event.key == pygame.K_l:
-				belt_mode = 'door_close'
+				door_mode = 'door_close'
 				print "Belt forward pressed"
 				door_setting_toggle = True
 
 			# Drum speed adjustments; 0 is off, 1-4 is range of values lowest to highest
 			elif event.key == pygame.K_0:
-				SPEED=127
-				print "Speed set to ",SPEED
+				DRUM_SPEED=127
+				print "Speed set to ", DRUM_SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_1:
-				SPEED=200
-				print "Speed set to ",SPEED
+				DRUM_SPEED=200
+				print "Dig speed set to ", DRUM_SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_2:
-				SPEED=210
-				print "Speed set to ",SPEED
+				DRUM_SPEED=210
+				print "Dig speed set to ", DRUM_SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_3:
-				SPEED=230
-				print "Speed set to ",SPEED
+				DRUM_SPEED=230
+				print "Dig speed set to ", DRUM_SPEED
 				digging_setting_toggle = True
 			elif event.key == pygame.K_4:
-				SPEED=500
-				print "Speed set to ",SPEED
+				DRUM_SPEED=500
+				print "Dig speed set to ", DRUM_SPEED
 				digging_setting_toggle = True
+
+			# Locomotion speed adjustments; 6-9 is range of values lowest to highest
+			elif event.key == pygame.K_6:
+				MOVEMENT_SPEED=100
+				print "Drive speed set to ", MOVEMENT_SPEED
+				move_setting_toggle = True
+			elif event.key == pygame.K_7:
+				MOVEMENT_SPEED=150
+				print "Drive speed set to ", MOVEMENT_SPEED
+				move_setting_toggle = True
+			elif event.key == pygame.K_8:
+				MOVEMENT_SPEED=200
+				print "Drive speed set to ",MOVEMENT_SPEED
+				move_setting_toggle = True
+			elif event.key == pygame.K_9:
+				MOVEMENT_SPEED=255
+				print "Drive speed set to ", MOVEMENT_SPEED
+				move_setting_toggle = True
+
+			# Depo sweep in command
+			elif event.key == pygame.K_u:
+				depo_mode = 'depo_sweep_in'
+				print "Depo sweep in pressed"
+				depo_setting_toggle = True
+
+			# Depo sweep out command
+			elif event.key == pygame.K_j:
+				depo_mode = 'depo_sweep_out'
+				print "Depo sweep out pressed"
+				depo_setting_toggle = True
+
+			# Depo linear actuators up command
+			elif event.key == pygame.K_y:
+				depo_lin_act_mode = 'depo_lin_acts_up'
+				print "Depo linear actuators up pressed"
+				depo_lin_act_setting_toggle = True
+			
+			# Depo linear actuators up command
+			elif event.key == pygame.K_h:
+				depo_lin_act_mode = 'depo_lin_acts_down'
+				print "Depo linear actuators down pressed"
+				depo_lin_act_setting_toggle = True
+
+			elif event.key == pygame.K_BACKSPACE:
+				if EXIT_GCS_WITH_BKSP:
+					done = True
+					socket_thread.socket_destroy()
+
 
 		# Defining key released events for each key
 		if event.type == pygame.KEYUP: 
 			if event.key == pygame.K_w or event.key == pygame.K_a or event.key == pygame.K_s or event.key == pygame.K_d:
-				mode = 'stop'
+				move_mode = 'stop'
 				print "Key released"
-				keyboard_speed_setting_toggle = True
-			elif event.key == pygame.K_q: #STOP DIGGING HERE -----------------
-				mode = 'drum_stop'
+				move_setting_toggle = True
+			elif event.key == pygame.K_q: 
+				drum_mode = 'drum_stop'
 				print "Key released"
 				digging_setting_toggle = True
 			elif event.key == pygame.K_o:
-				belt_mode = 'door_open'
+				door_mode = 'door_open'
 				door_setting_toggle = True
 			elif event.key == pygame.K_l:
-				belt_mode = 'door_close'
+				door_mode = 'door_close'
 				door_setting_toggle = True
 			elif event.key == pygame.K_i or event.key == pygame.K_k:
 				lin_act_mode = 'lin_acts_stop'  
 				print "Linear actuators stopped"
 				lin_act_setting_toggle = True
+			elif event.key == pygame.K_u or event.key == pygame.K_j:
+				depo_mode = 'depo_sweep_stop'
+				print "Depo sweep stop pressed"
+				depo_setting_toggle = True
+			elif event.key == pygame.K_y or event.key == pygame.K_h:
+				depo_lin_act_mode = 'depo_lin_acts_stop'
+				print "Depo linear actuators stop pressed"
+				depo_lin_act_setting_toggle = True
+
 		
 	
-	if keyboard_speed_setting_toggle \
-		or digging_setting_toggle or door_setting_toggle or lin_act_setting_toggle:
+	if move_setting_toggle or digging_setting_toggle or door_setting_toggle \
+	or lin_act_setting_toggle or depo_setting_toggle or depo_lin_act_setting_toggle:
 		send_data = []
 
-		if keyboard_speed_setting_toggle:
-			send_data.append({'name': 'W/R Motor0', 'value': speed_list[mode][0]})
-			send_data.append({'name': 'W/R Motor1', 'value': speed_list[mode][1]})
-			send_data.append({'name': 'W/R Motor2', 'value': speed_list[mode][2]})
-			send_data.append({'name': 'W/R Motor3', 'value': speed_list[mode][3]})
-			keyboard_speed_setting_toggle = False
-                """
-		"""				
+		if move_setting_toggle:
+			if move_mode == 'stop':
+				send_data.append({'name': 'Loco Stop', 'value': 0})
+			elif move_mode == 'forward':
+				send_data.append({'name': 'Loco Forward', 'value': MOVEMENT_SPEED})
+			elif move_mode == 'backward':
+				send_data.append({'name': 'Loco Forward', 'value': -MOVEMENT_SPEED})
+			elif move_mode == 'left':
+				send_data.append({'name': 'Loco Left', 'value': MOVEMENT_SPEED})
+			elif move_mode == 'right':
+				send_data.append({'name': 'Loco Right', 'value': MOVEMENT_SPEED})
+
+			move_setting_toggle = False
+              
 		if digging_setting_toggle:
-			if mode == 'drum_stop':
+			if drum_mode == 'drum_stop':
 				send_data.append({'name': 'W/R Servo1', 'value': 127}) #changed to servo 1 so it doesn't mix up with the locomotion motors
 			else:
-				send_data.append({'name': 'W/R Servo1', 'value': SPEED}) 
+				send_data.append({'name': 'W/R Servo1', 'value': DRUM_SPEED}) 
 			digging_setting_toggle = False
 
 		if lin_act_setting_toggle:
@@ -267,15 +328,34 @@ while done == False:
 			lin_act_setting_toggle=False	
 
 		if door_setting_toggle:
-			if belt_mode == 'door_open':
+			if door_mode == 'door_open':
 				send_data.append({'name': 'Door Open', 'value': 120})
-			elif belt_mode == 'door_close':
+			elif door_mode == 'door_close':
 				send_data.append({'name': 'Door Close', 'value': 250})
+
+		if depo_setting_toggle:
+			if depo_mode == 'depo_sweep_stop':
+				send_data.append({'name': 'Depo Sweep Stop', 'value': 0})
+			elif depo_mode == 'depo_sweep_in':
+				send_data.append({'name': 'Depo Sweep In', 'value': 200})
+			elif depo_mode == 'depo_swseep_out':
+				send_data.append({'name': 'Depo Sweep Out', 'value': -200})
+			depo_setting_toggle = False
+
+		if depo_lin_act_setting_toggle:
+			if depo_lin_act_mode == 'depo_lin_acts_stop':
+				send_data.append({'name': 'Depo Linear Actuators Stop', 'value': 0})
+			if depo_lin_act_mode == 'depo_lin_acts_up':
+				send_data.append({'name': 'Depo Linear Actuators Up', 'value': 100})
+			if depo_lin_act_mode == 'depo_lin_acts_down':
+				send_data.append({'name': 'Depo Linear Actuators Down', 'value': 255})
+			depo_lin_act_setting_toggle = False
 		
-		keyboard_speed_setting_toggle = False
+		move_setting_toggle = False
 		door_setting_toggle = False
 		putincommand(send_data)
 	connection_status.draw()
 	pygame.display.flip()
 	clock.tick(60)
 pygame.quit()
+sys.exit()

@@ -1,42 +1,46 @@
 #!/usr/bin/python3
 
+# LINEAR ACTUATORS: 60 - 170 down  |  190 - 250 up
+# DOOR: 120 open  |   250 close
+
+# 'do' for door
+# 'dr' for drum
+# 'l' for linear actuators
+
 import paho.mqtt.client as mqtt
 from time import sleep
+
 import sys
 
-assert(len(sys.argv) >= 2)
-motors = ['', 'motors/a', 'motors/b', 'linearActuator/a', 'linearActuator/b']
+DRUM_TOPIC = 'motors/all'
+LIN_ACTS_TOPIC = 'linearActuator/a'
+DOOR_TOPIC = 'linearActuator/b'
 
-laspeed = int(sys.argv[1])
-
-m1 = 'motors/a'
-m2 = 'motors/b'
-m3 = motors[3]
-#power = int((int(sys.argv[2])+100)/200 * 255)
-power = int(sys.argv[2])
 client = mqtt.Client()
 client.connect('127.0.0.1')
 
-client.publish("digging/{}".format(m1), payload=230, qos=0, retain=False)
-client.publish("digging/{}".format(m2), payload=230, qos=0, retain=False)
+action_topic = ''
+if sys.argv[1] == 'dr':
+    action_topic = DRUM_TOPIC
+elif sys.argv[1] == 'do':
+    action_topic = DOOR_TOPIC
+elif sys.argv[1] == 'l':
+    action_topic = LIN_ACTS_TOPIC
+
+power = sys.argv[2]
+time = float(sys.argv[3])
+
+client.publish("digging/{}".format(DOOR_TOPIC), payload=250, qos=0, retain=False)
+client.publish("digging/{}".format(LIN_ACTS_TOPIC), payload=250, qos=0, retain=False)
 sleep(1)
+# client.publish("digging/{}".format(action_topic), payload=0, qos=0, retain=False)
 
+client.publish("digging/{}".format(LIN_ACTS_TOPIC), payload=0, qos=0, retain=False)
+"""
 while True:
-	sleep(6)
-	client.publish("digging/{}".format(m3), payload=65, qos=0, retain=False)
-	sleep(0.5)
-	client.publish("digging/{}".format(m3), payload=0, qos=0, retain=False)
+sleep(2)
 
-
-# time.sleep(0.01)
-print("motor: {} power: {}".format(m1, power))
-print("motor: {} power: {}".format(m2, power))
-print("motor: {} power: {}".format(m3, laspeed))
-
-if (len(sys.argv) > 2):
-    if (float(sys.argv[3]) > 0):
-        time.sleep(float(sys.argv[3]))
-        client.publish("digging/{}".format(m1), payload=0x00, qos=0, retain=False)
-        client.publish("digging/{}".format(m2), payload=0x00, qos=0, retain=False)
-        client.publish("digging/{}".format(m3), payload=0x00, qos=0, retain=False)
-        print("stopping")
+client.publish("digging/{}".format(LIN_ACTS_TOPIC), payload=0, qos=0, retain=False)
+    client.publish("digging/{}".format(LIN_ACTS_TOPIC), payload=100, qos=0, retain=False)
+    sleep(0.1)
+"""
