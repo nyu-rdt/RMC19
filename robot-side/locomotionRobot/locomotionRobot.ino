@@ -8,7 +8,7 @@
 #define WIFI_PASS "lunabots"
 #define WIFI_CHANNEL 11
 
-#define SERVER_ADDR "192.168.1.104"
+#define SERVER_ADDR "192.168.1.102"
 #define SERVER_PORT 1883
 #define SUBSYSTEM_NAME "locomotion"
 
