@@ -115,7 +115,7 @@ while not rospy.is_shutdown():
                 if target == 22:
                     msg.channel_name = "digging/linearActuator"
                     msg.field = "a"
-                    msg.value = 220
+                    msg.value = 250
                     pub.publish(msg)
                 if target == 23:
                     msg.channel_name = "digging/linearActuator"
@@ -135,8 +135,7 @@ while not rospy.is_shutdown():
                 if target == 26:
                     msg.channel_name = "deposition/motors"
                     msg.field = "all"
-                    # add handling for this 500 in ESP code
-                    msg.value = 500
+                    msg.value = 455
                     pub.publish(msg)
                 if target == 27:
                     msg.channel_name = "deposition/motors"
@@ -151,7 +150,7 @@ while not rospy.is_shutdown():
                 if target == 29:
                     msg.channel_name = "deposition/linearActuator"
                     msg.field = "a"
-                    msg.value = 255
+                    msg.value = 254
                     pub.publish(msg)
                 if target == 30:
                     msg.channel_name = "deposition/linearActuator"
@@ -162,6 +161,7 @@ while not rospy.is_shutdown():
                     msg.channel_name = "locomotion/direction"
                     msg.field = "forward"
                     pub.publish(msg)
+                    rospy.loginfo("Recieved drive forward command, sending %s", msg.value)
                 if target == 32:
                     msg.channel_name = "locomotion/turn"
                     msg.field = "left"
@@ -175,6 +175,9 @@ while not rospy.is_shutdown():
                     msg.field = "forward"
                     msg.value = 0
                     pub.publish(msg)
+                #Panic target
+                if target==35:
+                    pass
                 if 1<=target<=4:
                     msg.channel_name = "loco/motors"
                     msg.field = motorNames[target-1]

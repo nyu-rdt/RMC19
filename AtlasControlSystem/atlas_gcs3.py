@@ -121,6 +121,7 @@ door_setting_toggle = False
 lin_act_setting_toggle = False
 depo_setting_toggle = False
 depo_lin_act_setting_toggle = False
+panic_setting_toggle = False
 
 MOVEMENT_SPEED = 100
 DRUM_SPEED = 500
@@ -228,7 +229,7 @@ while done == False:
 				print "Drive speed set to ",MOVEMENT_SPEED
 				move_setting_toggle = True
 			elif event.key == pygame.K_9:
-				MOVEMENT_SPEED=255
+				MOVEMENT_SPEED=254
 				print "Drive speed set to ", MOVEMENT_SPEED
 				move_setting_toggle = True
 
@@ -256,11 +257,15 @@ while done == False:
 				print "Depo linear actuators down pressed"
 				depo_lin_act_setting_toggle = True
 
+			# Exit GCS with backspace command
 			elif event.key == pygame.K_BACKSPACE:
 				if EXIT_GCS_WITH_BKSP:
 					done = True
 					socket_thread.socket_destroy()
 
+			# PANIC COMMAND
+			# elif event.key == pygame.K_SPACE:
+			# 	panic_setting_toggle = True
 
 		# Defining key released events for each key
 		if event.type == pygame.KEYUP: 
@@ -294,8 +299,14 @@ while done == False:
 		
 	
 	if move_setting_toggle or digging_setting_toggle or door_setting_toggle \
-	or lin_act_setting_toggle or depo_setting_toggle or depo_lin_act_setting_toggle:
+	or lin_act_setting_toggle or depo_setting_toggle or depo_lin_act_setting_toggle \
+	or panic_setting_toggle:
 		send_data = []
+
+		# if panic_setting_toggle:
+		# 	print("haha")
+		# 	send_data.append({'name': 'Panic', 'value': 0})
+		# 	panic_setting_toggle = False
 
 		if move_setting_toggle:
 			if move_mode == 'stop':
@@ -304,7 +315,7 @@ while done == False:
 				send_data.append({'name': 'Loco Forward', 'value': MOVEMENT_SPEED})
 			elif move_mode == 'backward':
 				send_data.append({'name': 'Loco Forward', 'value': -MOVEMENT_SPEED})
-			elif move_mode == 'left':
+			elif move_mo	de == 'left':
 				send_data.append({'name': 'Loco Left', 'value': MOVEMENT_SPEED})
 			elif move_mode == 'right':
 				send_data.append({'name': 'Loco Right', 'value': MOVEMENT_SPEED})
@@ -338,8 +349,8 @@ while done == False:
 				send_data.append({'name': 'Depo Sweep Stop', 'value': 0})
 			elif depo_mode == 'depo_sweep_in':
 				send_data.append({'name': 'Depo Sweep In', 'value': 200})
-			elif depo_mode == 'depo_swseep_out':
-				send_data.append({'name': 'Depo Sweep Out', 'value': -200})
+			elif depo_mode == 'depo_sweep_out':
+				send_data.append({'name': 'Depo Sweep Out', 'value': 455})
 			depo_setting_toggle = False
 
 		if depo_lin_act_setting_toggle:
@@ -348,7 +359,7 @@ while done == False:
 			if depo_lin_act_mode == 'depo_lin_acts_up':
 				send_data.append({'name': 'Depo Linear Actuators Up', 'value': 100})
 			if depo_lin_act_mode == 'depo_lin_acts_down':
-				send_data.append({'name': 'Depo Linear Actuators Down', 'value': 255})
+				send_data.append({'name': 'Depo Linear Actuators Down', 'value': 254})
 			depo_lin_act_setting_toggle = False
 		
 		move_setting_toggle = False

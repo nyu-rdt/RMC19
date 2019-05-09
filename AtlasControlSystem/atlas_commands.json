@@ -346,9 +346,9 @@
     "readdata": 0, 
     "writebits": 8, 
     "readbits": 16, 
-    "wmax": 500, 
+    "wmax": 455, 
     "returnable": "required", 
-    "wmin": 500
+    "wmin": 455
   },
   "Depo Sweep Stop": {
     "rmin": 0, 
@@ -447,6 +447,19 @@
     "name": "Loco Stop", 
     "rmax": 65536, 
     "cmd": 34, 
+    "readdata": 0, 
+    "writebits": 8, 
+    "readbits": 16, 
+    "wmax": 0, 
+    "returnable": "required", 
+    "wmin": 0
+  },
+  "Panic": {
+    "rmin": 0, 
+    "writedata": 0, 
+    "name": "Panic", 
+    "rmax": 65536, 
+    "cmd": 35, 
     "readdata": 0, 
     "writebits": 8, 
     "readbits": 16, 
