@@ -177,7 +177,17 @@ while not rospy.is_shutdown():
                     pub.publish(msg)
                 #Panic target
                 if target==35:
-                    pass
+                    msg.channel_name = "locomotion"
+                    msg.field = "panic"
+                    pub.publish(msg)
+                    
+                    msg.channel_name = "digging"
+                    msg.field = "panic"
+                    pub.publish(msg)
+                    
+                    msg.channel_name = "depostion"
+                    msg.field = "panic"
+                    pub.publish(msg)
                 if 1<=target<=4:
                     msg.channel_name = "loco/motors"
                     msg.field = motorNames[target-1]
