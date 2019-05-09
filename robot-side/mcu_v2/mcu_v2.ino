@@ -113,6 +113,7 @@ void setup() {
 
   // Wait for motor controllers to turn on...
   delay(5000);
+  panic();
 }
 
 void loop() {

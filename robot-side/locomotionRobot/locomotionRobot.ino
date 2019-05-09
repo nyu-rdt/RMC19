@@ -30,12 +30,15 @@ Adafruit_MQTT_Subscribe rawByteIn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAM
 Adafruit_MQTT_Subscribe forwardMove = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/direction/forward");
 Adafruit_MQTT_Subscribe leftTurn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/turn/left");
 Adafruit_MQTT_Subscribe rightTurn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/turn/right");
+Adafruit_MQTT_Subscribe panic = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/panic");
 
 
 void mqtt_connect();
 void sendPreamble(int index);
 void sendValue(void* data);
 void sendStop();
+
+int iterator = 0;
 
 void setup() {
     Serial.begin(SERIALSPEED);
@@ -50,7 +53,6 @@ void setup() {
     mqtt.subscribe(&rightTurn);
 
 }
-
 
 void forwardMoveAction(uint8_t* power){
     sendPreamble(FL);
@@ -104,14 +106,33 @@ void loop() {
     mqtt_connect();
     Adafruit_MQTT_Subscribe* subPtr;
     while ((subPtr = mqtt.readSubscription(MQTT_READ_TIMEOUT))){
-        if (subPtr == &forwardMove){
-            forwardMoveAction(forwardMove.lastread);
-        }
-        else if (subPtr == &leftTurn){
-            leftMoveAction(leftTurn.lastread);
-        }
-        else if (subPtr == &rightTurn){
-            rightMoveAction(rightTurn.lastread);
+        if (iterator < 2) {
+          iterator++;
+        } else {
+          if (subPtr == &forwardMove){
+              if (abs(atoi((char *) forwardMove.lastread)) == 255) {
+                 continue;
+              } else {
+                 forwardMoveAction(forwardMove.lastread);
+              }
+          }
+          else if (subPtr == &leftTurn){
+              if (abs(atoi((char *) leftTurn.lastread)) == 255) {
+                continue;
+              } else {
+                leftMoveAction(leftTurn.lastread);
+              }
+          }
+          else if (subPtr == &rightTurn){
+              if (abs(atoi((char *) rightTurn.lastread)) == 255) {
+                continue;
+              } else {
+                rightMoveAction(rightTurn.lastread);
+              }
+          }
+          else if (subPtr == &panic) {
+              sendPreamble(0xF5);
+          }
         }
     }
 }
@@ -139,9 +160,11 @@ void sendStop(){
 void sendValue(uint8_t* data){
     //update when we know what the data looks like over the wire
     uint8_t value = atoi((char*) data);
-    Serial.write(value);
-
+    if (value != 255) {
+      Serial.write(value);
+    }
 }
+
 void sendRaw(uint8_t value){
     Serial.write(value);
 }

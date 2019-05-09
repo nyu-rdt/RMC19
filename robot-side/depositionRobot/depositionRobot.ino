@@ -28,6 +28,7 @@ Adafruit_MQTT_Subscribe rawByteIn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAM
 Adafruit_MQTT_Subscribe pusher = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/all");
 Adafruit_MQTT_Subscribe linearActuator = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/a");
 Adafruit_MQTT_Subscribe vibration = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/vibration/a");
+Adafruit_MQTT_Subscribe panic = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/panic");
 
 
 void mqtt_connect();
@@ -72,6 +73,9 @@ void loop() {
             sendValue(vibration.lastread);
             sendStop();
         }
+        else if (subPtr == &panic) {
+            sendPreamble(0xF5);
+        }
     }
 }
 
@@ -97,7 +101,10 @@ void sendStop(){
 
 void sendValue(uint8_t* data){
     //update when we know what the data looks like over the wire
-    uint8_t value = atoi((char*) data);
-    Serial.write(value);
-
+    int8_t value = atoi((char*) data);
+    if (value > 500) {
+      Serial.write(-(value - 255)); 
+    } else {
+      Serial.write(value);
+    }
 }

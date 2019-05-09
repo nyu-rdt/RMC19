@@ -23,11 +23,10 @@ Adafruit_MQTT_Client mqtt(&client, SERVER_ADDR, SERVER_PORT, SUBSYSTEM_NAME, "")
 
 Adafruit_MQTT_Publish rawByteOut = Adafruit_MQTT_Publish(&mqtt, SUBSYSTEM_NAME "/output/rawData");
 Adafruit_MQTT_Subscribe rawByteIn = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/input/rawData");
-//Adafruit_MQTT_Subscribe motorA = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/a");
-//Adafruit_MQTT_Subscribe motorB = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/b");t
 Adafruit_MQTT_Subscribe drum = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/motors/all");
 Adafruit_MQTT_Subscribe linA = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/a");
 Adafruit_MQTT_Subscribe linB = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/linearActuator/b");
+Adafruit_MQTT_Subscribe panic = Adafruit_MQTT_Subscribe(&mqtt, SUBSYSTEM_NAME "/panic");
 
 
 void mqtt_connect();
@@ -85,6 +84,9 @@ void loop() {
             sendPreamble(0x20);
             sendValue(linB.lastread);
             sendStop();
+        }
+        else if (subPtr == &panic) {
+            sendPreamble(0xF5);
         }
     } 
 }
